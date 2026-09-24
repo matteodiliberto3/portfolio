@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@vercel/analytics";
 import Link from "next/link";
 import {
   useCallback,
@@ -129,6 +130,7 @@ export function Booking() {
   const sideRef = useRef<HTMLElement>(null);
 
   const pickDay = (d: string) => {
+    if (day == null) track("prenota_giorno"); // first step of the funnel, once per visit
     setDay(d);
     setSlot(null);
     setSubmitError(null);
@@ -180,6 +182,7 @@ export function Booking() {
         return;
       }
       setBooked({ start: json.start!, end: json.end!, meet: json.meet ?? null, demo: Boolean(json.demo) });
+      track("prenota_confermata", { demo: Boolean(json.demo) });
     } catch {
       setSubmitError("Connessione persa. Riprova.");
     } finally {
@@ -320,6 +323,7 @@ export function Booking() {
                   style={{ ["--i" as string]: Math.min(i, 9) }}
                   aria-pressed={slot === s}
                   onClick={() => {
+                    if (slot == null) track("prenota_orario");
                     setSlot(s);
                     setSubmitError(null);
                   }}
