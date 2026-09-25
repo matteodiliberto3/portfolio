@@ -9,7 +9,7 @@ const steps = [
   },
   {
     n: "2",
-    title: "Prima schermata con primo prodotto.",
+    title: "Il primo prodotto in poco tempo.",
     body: "Potrai vedere un’anteprima del tuo prodotto, per capire se la direzione presa è quella giusta.",
   },
   {
