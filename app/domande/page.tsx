@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { ConsultLink } from "@/components/consult-link";
 import { JsonLd } from "@/components/json-ld";
 import { PageLink } from "@/components/page-link";
 import { faqJsonLd, faqs, graphJsonLd } from "@/lib/site";
@@ -35,14 +35,7 @@ export default function FaqPage() {
             <div className={consult ? "faq-item faq-item-consult" : "faq-item"} key={item.question}>
               <dt>
                 {item.question}
-                {consult ? (
-                  <Link className="faq-consult press" href="/prenota">
-                    Prenota una consulenza
-                    <span className="faq-consult-arrow" aria-hidden="true">
-                      →
-                    </span>
-                  </Link>
-                ) : null}
+                {consult ? <ConsultLink /> : null}
               </dt>
               <dd>{item.answer}</dd>
             </div>

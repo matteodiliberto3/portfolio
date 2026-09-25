@@ -22,7 +22,7 @@ export function Contact() {
           Scrivimi
         </a>
         <Link className="text-link" href="/prenota">
-          Prenota una chiamata →
+          Prenota una chiamata
         </Link>
       </Reveal>
       <Reveal as="p" className="colophon" delay={240}>

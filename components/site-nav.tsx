@@ -1,7 +1,7 @@
 "use client";
 
 import { PageLink } from "@/components/page-link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /* Once the reader is inside the story the bar steps aside, and comes back on the
  * first scroll up: the sections stay one gesture away instead of being lost. */
@@ -10,26 +10,49 @@ const INTENT = 12; // px travelled in one direction before it reacts
 
 export function SiteNav() {
   const [hidden, setHidden] = useState(false);
+  const [instant, setInstant] = useState(false);
   const mark = useRef(0);
+
+  useLayoutEffect(() => {
+    const storyLine = () => window.innerHeight * STORY_STARTS;
+    const hash = window.location.hash;
+    let targetTop = 0;
+    const target =
+      hash && hash !== "#top"
+        ? document.getElementById(decodeURIComponent(hash.slice(1)))
+        : null;
+    if (target) targetTop = target.getBoundingClientRect().top + window.scrollY;
+    // Born hidden when the landing spot is already inside the story. Doing this
+    // before paint skips the frame where the bar is visible and then slides away.
+    const html = document.documentElement;
+    delete html.dataset.navAway;
+    html.dataset.scrollBehavior = "smooth";
+    html.style.scrollBehavior = "";
+    if (target) target.scrollIntoView();
+    const y = window.scrollY;
+    mark.current = y;
+    if (y <= storyLine() && targetTop <= storyLine()) return;
+    setHidden(true);
+    setInstant(true);
+  }, []);
+
+  useEffect(() => {
+    if (!instant) return;
+    const frame = requestAnimationFrame(() => setInstant(false));
+    return () => cancelAnimationFrame(frame);
+  }, [instant]);
 
   useEffect(() => {
     const pastStory = () => window.scrollY > window.innerHeight * STORY_STARTS;
-
-    // A return from another page can land already inside the story, with no
-    // scroll gesture. The bar should be gone in that case, same as if the
-    // reader had scrolled there.
-    mark.current = window.scrollY;
-    setHidden(pastStory());
-
     let frame = 0;
 
     const read = () => {
       frame = 0;
       const y = window.scrollY;
       const travel = y - mark.current;
-      if (Math.abs(travel) < INTENT) return; // a nudge is not a decision
+      if (Math.abs(travel) < INTENT) return;
       mark.current = y;
-      setHidden(travel > 0 && y > window.innerHeight * STORY_STARTS);
+      setHidden(travel > 0 && pastStory());
     };
 
     const onScroll = () => {
@@ -44,7 +67,13 @@ export function SiteNav() {
   }, []);
 
   return (
-    <nav className="nav" aria-label="Sezioni" data-hidden={hidden || undefined} inert={hidden}>
+    <nav
+      className="nav"
+      aria-label="Sezioni"
+      data-hidden={hidden || undefined}
+      data-instant={instant || undefined}
+      inert={hidden}
+    >
       <a className="nav-name" href="#top">
         M. Di Liberto
       </a>

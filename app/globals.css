@@ -157,6 +157,14 @@ a {
     opacity 140ms var(--ease-out);
 }
 
+/* landing is not a gesture: the flag is set before the page paints, so the bar is never born visible */
+html[data-nav-away] .nav,
+.nav[data-hidden][data-instant] {
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: none;
+}
+
 .nav a {
   text-decoration: none;
 }
@@ -969,7 +977,7 @@ a {
 }
 
 .faq-item-consult dd {
-  padding-right: 15rem;
+  padding-right: 16rem;
 }
 
 .faq-consult {
@@ -979,8 +987,8 @@ a {
   z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 2px 0 2px 8px;
+  gap: 8px;
+  padding-left: 12px;
   background: var(--paper);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -990,7 +998,7 @@ a {
   color: var(--ink);
   white-space: nowrap;
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateX(-8px);
   pointer-events: none;
   transition:
     opacity 180ms var(--ease-out),
@@ -1003,27 +1011,43 @@ a {
   top: 0;
   bottom: 0;
   right: 100%;
-  width: 40px;
+  width: 28px;
   background: linear-gradient(90deg, transparent, var(--paper));
+}
+
+.faq-consult-label {
+  background-image: linear-gradient(var(--ink), var(--ink));
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  padding-bottom: 3px;
+  transition: background-size 420ms var(--ease-out);
 }
 
 .faq-consult-arrow {
   display: inline-block;
-  transition: transform 320ms var(--ease-out);
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .faq-item-consult:hover .faq-consult,
-  .faq-item-consult:focus-within .faq-consult {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-  }
+.faq-item-consult:hover .faq-consult,
+.faq-item-consult:focus-within .faq-consult {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
 
-  .faq-item-consult:hover .faq-consult-arrow,
-  .faq-item-consult:focus-within .faq-consult-arrow {
-    transform: translateX(5px);
-    transition-delay: 40ms;
+.faq-item-consult:hover .faq-consult-label,
+.faq-item-consult:focus-within .faq-consult-label {
+  background-size: 100% 1px;
+}
+
+/* it has to brake visibly at the end: that landing is when the page changes */
+.faq-consult[data-leaving] .faq-consult-arrow {
+  animation: consult-arrow-leave 420ms var(--ease-move) forwards;
+}
+
+@keyframes consult-arrow-leave {
+  to {
+    transform: translateX(48px);
   }
 }
 
@@ -1698,6 +1722,11 @@ a {
     transition: opacity 160ms linear;
   }
 
+  .nav[data-instant],
+  .nav[data-instant][data-hidden] {
+    transition: none;
+  }
+
   .work-curtain,
   [data-reveal]:not([data-in]) .work-curtain {
     transform: none;
@@ -1787,12 +1816,16 @@ a {
   }
 
   .faq-consult,
+  .faq-consult-label,
   .faq-consult-arrow,
   .faq-item-consult:hover .faq-consult,
   .faq-item-consult:focus-within .faq-consult,
-  .faq-item-consult:hover .faq-consult-arrow,
-  .faq-item-consult:focus-within .faq-consult-arrow {
+  .faq-item-consult:hover .faq-consult-label,
+  .faq-item-consult:focus-within .faq-consult-label,
+  .faq-consult[data-leaving] .faq-consult-arrow {
+    background-size: 100% 1px;
     transform: none;
+    animation: none;
     transition: opacity 160ms ease;
   }
 

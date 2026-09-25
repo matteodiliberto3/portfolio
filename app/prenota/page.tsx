@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackHome } from "@/components/back-home";
 import { Booking } from "@/components/booking/booking";
 
 export const metadata = {
@@ -18,9 +18,7 @@ export default function BookingPage() {
   return (
     <main className="bk-page">
       <header className="bk-top">
-        <Link className="back press" href="/#contatto">
-          ← Torna al sito
-        </Link>
+        <BackHome className="back press">← Torna al sito</BackHome>
         <span className="eyebrow">Matteo Di Liberto</span>
       </header>
 
