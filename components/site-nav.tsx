@@ -15,6 +15,9 @@ export function SiteNav() {
           <a href="#metodo">Metodo</a>
         </li>
         <li>
+          <a href="#domande">Domande</a>
+        </li>
+        <li>
           <a className="nav-cta" href="#contatto">
             Scrivimi
           </a>

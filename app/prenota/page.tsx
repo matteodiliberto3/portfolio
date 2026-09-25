@@ -2,8 +2,16 @@ import Link from "next/link";
 import { Booking } from "@/components/booking/booking";
 
 export const metadata = {
-  title: "Prenota una chiamata — Matteo Di Liberto",
-  description: "Trenta minuti su Google Meet per capire cosa ti serve. Scegli un giorno e un orario.",
+  title: "Prenota una chiamata",
+  description:
+    "Trenta minuti su Google Meet con Matteo Di Liberto. Scegli un giorno e un orario libero dal calendario.",
+  alternates: { canonical: "/prenota" },
+  openGraph: {
+    title: "Prenota una chiamata — Matteo Di Liberto",
+    description:
+      "Trenta minuti su Google Meet con Matteo Di Liberto. Scegli un giorno e un orario libero dal calendario.",
+    url: "/prenota",
+  },
 };
 
 export default function BookingPage() {

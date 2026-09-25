@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Note — Matteo Di Liberto",
+  title: "Note",
+  robots: { index: false, follow: false },
 };
 
 export default function NotesPage() {

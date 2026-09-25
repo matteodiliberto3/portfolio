@@ -1,3 +1,13 @@
+import { JsonLd } from "@/components/json-ld";
+import {
+  graphJsonLd,
+  personJsonLd,
+  serviceJsonLd,
+  siteDescription,
+  siteName,
+  siteUrl,
+  websiteJsonLd,
+} from "@/lib/site";
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
@@ -19,10 +29,39 @@ const instrumentSerif = Instrument_Serif({
   weight: "400",
 });
 
+const indexable = process.env.VERCEL_ENV !== "preview";
+
 export const metadata: Metadata = {
-  title: "Matteo Di Liberto",
-  description:
-    "Portfolio di Matteo Di Liberto. Cinque progetti online: The Teaching Hub, Krypt Trader Engine, Voltra, B&B Massimo Centro, Studio Picco Bellazzi.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${siteName} — siti e web app, a mano`,
+    template: `%s — ${siteName}`,
+  },
+  description: siteDescription,
+  applicationName: siteName,
+  authors: [{ name: siteName, url: siteUrl }],
+  creator: siteName,
+  category: "portfolio",
+  robots: indexable
+    ? { index: true, follow: true }
+    : { index: false, follow: false },
+  openGraph: {
+    type: "website",
+    locale: "it_IT",
+    url: siteUrl,
+    siteName,
+    title: `${siteName} — siti e web app, a mano`,
+    description: siteDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${siteName} — siti e web app, a mano`,
+    description: siteDescription,
+  },
+};
+
+export const viewport = {
+  themeColor: "#e6e1d8",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -33,6 +72,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <JsonLd
+          data={graphJsonLd([personJsonLd(), websiteJsonLd(), serviceJsonLd()])}
+        />
         {children}
         <Analytics />
       </body>

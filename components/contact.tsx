@@ -9,7 +9,7 @@ export function Contact() {
     <section className="act contact" id="contatto" aria-labelledby="contact-title">
       <Heading
         id="contact-title"
-        number="04"
+        number="05"
         label="Contatto"
         className="heading-contact"
         accentFrom={3}
