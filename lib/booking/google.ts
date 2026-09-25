@@ -79,11 +79,17 @@ type GEvent = {
  * Busy intervals across every configured calendar between two instants.
  * Uses the events list (not free/busy) so titles can be inspected: events
  * matching `rules.ignoreTitles` are skipped, as are all-day and "free" ones.
+ *
+ * Fails loudly rather than reporting an empty agenda: a calendar we cannot
+ * read is not a free calendar, and pretending otherwise would offer slots
+ * that are already taken. Only the extra busy calendars are optional.
  */
 export async function busyBetween(fromMs: number, toMs: number): Promise<Interval[]> {
   const out: Interval[] = [];
   const timeMin = new Date(fromMs).toISOString();
   const timeMax = new Date(toMs).toISOString();
+
+  await accessToken(); // without a token nothing below is readable
 
   await Promise.all(
     env.busyCalendarIds.map(async (id) => {
@@ -101,7 +107,8 @@ export async function busyBetween(fromMs: number, toMs: number): Promise<Interva
         try {
           page = await call(`/calendars/${encodeURIComponent(id)}/events?${params}`);
         } catch (err) {
-          console.warn("[events] calendario non leggibile:", id, err);
+          if (id === env.calendarId) throw err; // the booking calendar is not optional
+          console.warn("[events] calendario secondario non leggibile:", id, err);
           return;
         }
         for (const e of page.items ?? []) {
