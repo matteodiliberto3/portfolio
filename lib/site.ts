@@ -21,7 +21,7 @@ export const faqs = [
   {
     question: "Che lavori ha online?",
     answer:
-      "Cinque: The Teaching Hub, un hub per architetture e sicurezza con playground nel browser; Krypt Trader Engine, un motore quantitativo in avvio; Voltra, una vetrina di elettronica; il sito del B&B Massimo Centro a Palermo; il sito dello Studio Picco Bellazzi a Busto Arsizio.",
+      "The Teaching Hub, laboratori interattivi per padroneggiare concetti complessi di ingegneria del software; Krypt Trader Engine, un motore algoritmico per il trading quantitativo; Voltra, un e-commerce minimal ed elegante ideale per elettronica di alto profilo; la piattaforma digitale del B&B Massimo Centro a Palermo e un re-design della pagina web dello studio Picobellazzi sito in Busto Arsizio.",
   },
   {
     question: "Come si inizia un progetto?",
