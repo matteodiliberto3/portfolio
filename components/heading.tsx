@@ -11,6 +11,8 @@ type HeadingProps = {
   id: string;
   className?: string;
   accentFrom?: number;
+  /** Index of the word that gets the ink stroke drawn under it. */
+  inkAt?: number;
   /** Hide the "( 0n ) — label" line above the sentence. */
   hideEyebrow?: boolean;
 };
@@ -27,6 +29,7 @@ export function Heading({
   id,
   className,
   accentFrom,
+  inkAt,
   hideEyebrow,
 }: HeadingProps) {
   const words = children.split(" ");
@@ -41,7 +44,7 @@ export function Heading({
         {lineWords.map((word) => {
           const index = cursor++;
           const accent = accentFrom !== undefined && index >= accentFrom;
-          return (
+          const mask = (
             <span className="h-word-mask" key={index}>
               <span
                 className="h-word"
@@ -50,6 +53,16 @@ export function Heading({
               >
                 {word}
               </span>
+            </span>
+          );
+
+          if (index !== inkAt) return mask;
+
+          /* The mask clips its own overflow, so the stroke lives beside it. */
+          return (
+            <span className="h-word-slot" key={index} style={{ ["--w" as string]: index }}>
+              {mask}
+              <InkStroke />
             </span>
           );
         })}
@@ -73,6 +86,29 @@ export function Heading({
         <span aria-hidden>{lines}</span>
       </h2>
     </Reveal>
+  );
+}
+
+/**
+ * Hand-drawn stroke that draws itself once the word it sits under has risen.
+ * `pathLength="1"` lets the dash animation ignore the real path length.
+ */
+function InkStroke() {
+  return (
+    <svg className="h-ink" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden focusable="false">
+      <path
+        className="h-ink-line"
+        pathLength="1"
+        vectorEffect="non-scaling-stroke"
+        d="M3 26C32 12 54 30 91 20c37-10 66 9 106-5"
+      />
+      <path
+        className="h-ink-flick"
+        pathLength="1"
+        vectorEffect="non-scaling-stroke"
+        d="M26 36c38-6 104 2 152-6"
+      />
+    </svg>
   );
 }
 

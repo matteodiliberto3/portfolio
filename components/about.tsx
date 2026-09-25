@@ -5,7 +5,7 @@ const facts = [
   {
     k: "01",
     title: "Faccio la pagina e il codice.",
-    body: "Un solo interlocutore dal primo schizzo al sito acceso. Niente passaggi tra chi disegna e chi sviluppa.",
+    body: "Un solo interlocutore dalla bozza al sito. Niente passaggi tra chi disegna e chi sviluppa.",
   },
   {
     k: "02",
@@ -22,7 +22,7 @@ const facts = [
 export function About() {
   return (
     <section className="act about" id="chi-sono" aria-labelledby="about-title">
-      <Heading id="about-title" number="01" label="Chi sono" hideEyebrow>
+      <Heading id="about-title" number="01" label="Chi sono" inkAt={1} hideEyebrow>
         Dallo schizzo / all’opera d’arte.
       </Heading>
       <ol className="facts-grid">

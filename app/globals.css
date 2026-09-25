@@ -275,6 +275,43 @@ a {
   color: var(--ink-2);
 }
 
+.h-word-slot {
+  position: relative;
+  display: inline-block;
+}
+
+.h-ink {
+  position: absolute;
+  left: -0.06em;
+  right: 0.02em;
+  bottom: -0.06em;
+  height: 0.34em;
+  overflow: visible;
+  pointer-events: none;
+  color: var(--ink);
+}
+
+.h-ink path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.075em;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 620ms var(--ease-out);
+  transition-delay: calc(700ms + var(--w) * 60ms);
+}
+
+.h-ink-flick {
+  opacity: 0.45;
+  stroke-width: 0.04em;
+  transition-delay: calc(880ms + var(--w) * 60ms);
+}
+
+.heading[data-reveal]:not([data-in]) .h-ink path {
+  stroke-dashoffset: 1;
+}
+
 .heading-contact .act-heading {
   font-size: clamp(2.8rem, 7.5vw, 7rem);
 }
@@ -454,7 +491,8 @@ a {
 .heading[data-reveal]:not([data-in]) .h-num,
 .heading[data-reveal]:not([data-in]) .h-label,
 .heading[data-reveal]:not([data-in]) .h-rule,
-.heading[data-reveal]:not([data-in]) .h-word {
+.heading[data-reveal]:not([data-in]) .h-word,
+.heading[data-reveal]:not([data-in]) .h-ink path {
   transition-duration: 0ms;
   transition-delay: 0ms;
 }
@@ -1522,6 +1560,13 @@ a {
 
   .heading[data-reveal]:not([data-in]) .act-heading {
     opacity: 0;
+  }
+
+  /* the stroke is simply already there, it fades in with the heading */
+  .h-ink path,
+  .heading[data-reveal]:not([data-in]) .h-ink path {
+    stroke-dashoffset: 0;
+    transition: none;
   }
 
   .act-heading {
