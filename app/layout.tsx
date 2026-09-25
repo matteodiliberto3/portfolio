@@ -1,4 +1,5 @@
 import { JsonLd } from "@/components/json-ld";
+import { ViewTransitionBridge } from "@/components/page-link";
 import {
   graphJsonLd,
   personJsonLd,
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <JsonLd
           data={graphJsonLd([personJsonLd(), websiteJsonLd(), serviceJsonLd()])}
         />
+        <ViewTransitionBridge />
         {children}
         <Analytics />
       </body>

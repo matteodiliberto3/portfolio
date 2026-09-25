@@ -38,7 +38,7 @@ export function Opening() {
           />
         </div>
         <figcaption className="eyebrow intro-line" style={{ ["--i" as string]: 5 }}>
-          Scorri per vedere i lavori
+          Scorri per saperne di più
         </figcaption>
       </figure>
     </Reveal>

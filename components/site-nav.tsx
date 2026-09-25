@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLink } from "@/components/page-link";
 import { useEffect, useRef, useState } from "react";
 
 /* Once the reader is inside the story the bar steps aside, and comes back on the
@@ -12,7 +13,14 @@ export function SiteNav() {
   const mark = useRef(0);
 
   useEffect(() => {
+    const pastStory = () => window.scrollY > window.innerHeight * STORY_STARTS;
+
+    // A return from another page can land already inside the story, with no
+    // scroll gesture. The bar should be gone in that case, same as if the
+    // reader had scrolled there.
     mark.current = window.scrollY;
+    setHidden(pastStory());
+
     let frame = 0;
 
     const read = () => {
@@ -51,7 +59,9 @@ export function SiteNav() {
           <a href="#metodo">Metodo</a>
         </li>
         <li>
-          <a href="/domande">Domande</a>
+          <PageLink href="/domande" direction="forward">
+            Domande
+          </PageLink>
         </li>
         <li>
           <a className="nav-cta" href="#contatto">

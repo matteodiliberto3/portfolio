@@ -963,6 +963,70 @@ a {
   max-width: 42rem;
 }
 
+/* The booking cue sits on the right of this question and only arrives on hover. */
+.faq-item-consult {
+  position: relative;
+}
+
+.faq-item-consult dd {
+  padding-right: 15rem;
+}
+
+.faq-consult {
+  position: absolute;
+  top: 18px;
+  right: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0 2px 8px;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-10px);
+  pointer-events: none;
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 320ms var(--ease-out);
+}
+
+.faq-consult::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, var(--paper));
+}
+
+.faq-consult-arrow {
+  display: inline-block;
+  transition: transform 320ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .faq-item-consult:hover .faq-consult,
+  .faq-item-consult:focus-within .faq-consult {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .faq-item-consult:hover .faq-consult-arrow,
+  .faq-item-consult:focus-within .faq-consult-arrow {
+    transform: translateX(5px);
+    transition-delay: 40ms;
+  }
+}
+
 /* ---------- contact ---------- */
 .contact {
   padding-top: clamp(40px, 8vh, 96px);
@@ -1575,6 +1639,22 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .faq-item-consult dd {
+    padding-right: 0;
+  }
+
+  .faq-consult {
+    position: static;
+    margin-top: 12px;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .faq-consult-arrow {
+    transform: none;
+  }
+
   .steps-rail {
     display: none;
   }
@@ -1705,6 +1785,33 @@ a {
   .nav-cta {
     transition: none;
   }
+
+  .faq-consult,
+  .faq-consult-arrow,
+  .faq-item-consult:hover .faq-consult,
+  .faq-item-consult:focus-within .faq-consult,
+  .faq-item-consult:hover .faq-consult-arrow,
+  .faq-item-consult:focus-within .faq-consult-arrow {
+    transform: none;
+    transition: opacity 160ms ease;
+  }
+
+  html[data-arrive="forward"] .page,
+  html[data-arrive="back"] .story {
+    animation: vt-fade-in 180ms ease both;
+  }
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 @keyframes fade-only {
@@ -1713,6 +1820,37 @@ a {
   }
   to {
     opacity: 1;
+  }
+}
+
+/* Home ↔ Domande. The click navigates at once; only the page that arrives moves. */
+html[data-arrive="forward"] .page {
+  animation: vt-arrive 320ms var(--ease-out) both;
+}
+
+html[data-arrive="back"] .story {
+  animation: vt-arrive-back 320ms var(--ease-out) both;
+}
+
+html[data-intro-hold] .intro-line,
+html[data-intro-hold] .portrait-mask,
+html[data-intro-hold] .portrait-mask img {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes vt-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes vt-arrive-back {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 }
 

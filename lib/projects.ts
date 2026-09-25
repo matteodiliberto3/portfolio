@@ -48,7 +48,7 @@ export const projects: Project[] = [
     role: "Motore e interfaccia",
     stack: ["Next.js", "Dati di mercato"],
     claim: "Un motore quantitativo, ancora in avvio.",
-    summary: "Motore quant: analisi e deploy di strategie di alto profilo per i mercati.",
+    summary: "Motore quant: analisi e deploy di strategie di alto profilo per i mercati finanziari.",
     detail:
       "Aprendo l’indirizzo si legge una riga sola, al centro del nero: Initializing Quant Engine. Il progetto è online, l’interfaccia di lavoro non è ancora la home pubblica.",
     problem: "Leggere il mercato a mano è lento e pieno di bias.",
