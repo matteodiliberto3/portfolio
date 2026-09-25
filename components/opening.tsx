@@ -18,8 +18,10 @@ export function Opening() {
           </span>
         </h1>
         <p className="lede intro-line" style={{ ["--i" as string]: 3 }}>
-          Disegno la pagina e scrivo il codice che la fa funzionare. Sotto ci
-          sono cinque cose online: si aprono, si usano, si comprano.
+          Disegno la pagina e scrivo il codice, completamente a mano, curando
+          ogni dettaglio così da costruire la narrazione che più si addice al
+          cliente; così come un sarto cuce un vestito su misure in base ai
+          gusti e ciò che calza meglio per il cliente.
         </p>
         <a className="cta intro-line" style={{ ["--i" as string]: 4 }} href="#contatto">
           Parliamo del tuo progetto
