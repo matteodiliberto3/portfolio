@@ -30,7 +30,8 @@ export const faqs = [
   },
   {
     question: "Cosa resta al cliente a fine lavoro?",
-    answer: "Dominio, hosting e il sito. Le chiavi restano al cliente.",
+    answer:
+      "Dominio, hosting, sito, applicazione o progetto, in base a quale fosse l'esigenza del cliente.",
   },
   {
     question: "Dove lavora Matteo Di Liberto?",
