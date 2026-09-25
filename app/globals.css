@@ -182,8 +182,31 @@ html[data-nav-away] .nav,
   align-items: center;
 }
 
+/* same line as the text links: it grows from the left under the word */
+.nav-links a:not(.nav-cta) {
+  background-image: linear-gradient(var(--ink), var(--ink));
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  padding-bottom: 3px;
+  margin-top: 3px; /* keeps the words on the pill's optical line */
+  transition:
+    background-size 240ms var(--ease-out),
+    color 240ms var(--ease-out);
+}
+
 .nav-links a:hover {
   color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-links a:not(.nav-cta):hover {
+    background-size: 100% 1px;
+  }
+}
+
+.nav-links a:not(.nav-cta):focus-visible {
+  background-size: 100% 1px;
 }
 
 .nav-cta {
@@ -1724,6 +1747,12 @@ html[data-nav-away] .nav,
 
   .nav[data-instant],
   .nav[data-instant][data-hidden] {
+    transition: none;
+  }
+
+  /* the line under a link appears instead of growing */
+  .text-link,
+  .nav-links a:not(.nav-cta) {
     transition: none;
   }
 
