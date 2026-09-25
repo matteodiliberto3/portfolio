@@ -280,36 +280,58 @@ a {
   display: inline-block;
 }
 
+/* the splat hangs off the right edge of the word, roughly on its x-height */
 .h-ink {
   position: absolute;
-  left: -0.06em;
-  right: 0.02em;
-  bottom: -0.06em;
-  height: 0.34em;
+  left: 100%;
+  bottom: 0.02em;
+  width: 1.05em;
+  height: 0.85em;
+  margin-left: 0.03em;
   overflow: visible;
   pointer-events: none;
   color: var(--ink);
 }
 
-.h-ink path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 0.075em;
-  stroke-linecap: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset 620ms var(--ease-out);
-  transition-delay: calc(700ms + var(--w) * 60ms);
+.h-ink > * {
+  fill: currentColor;
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
 }
 
-.h-ink-flick {
-  opacity: 0.45;
-  stroke-width: 0.04em;
-  transition-delay: calc(880ms + var(--w) * 60ms);
+/* lands with a bit of overshoot, the way thrown ink spreads on impact */
+.h-ink-mass {
+  transform-origin: 25% 60%;
+  transition: transform 400ms cubic-bezier(0.34, 1.5, 0.64, 1);
+  transition-delay: calc(600ms + var(--w) * 60ms);
 }
 
-.heading[data-reveal]:not([data-in]) .h-ink path {
-  stroke-dashoffset: 1;
+/* the tails shoot out of the mass, so they grow from their base */
+.h-ink-tail {
+  transform-origin: left center;
+  transition: transform 300ms cubic-bezier(0.34, 1.5, 0.64, 1);
+  transition-delay: calc(660ms + var(--w) * 60ms + var(--d) * 40ms);
+}
+
+.h-ink-blot {
+  transition: transform 320ms cubic-bezier(0.34, 1.6, 0.64, 1);
+  transition-delay: calc(740ms + var(--w) * 60ms + var(--d) * 50ms);
+}
+
+.h-ink-drop {
+  transition: transform 300ms cubic-bezier(0.34, 1.6, 0.64, 1);
+  transition-delay: calc(830ms + var(--w) * 60ms + var(--d) * 45ms);
+}
+
+.heading[data-reveal]:not([data-in]) .h-ink-mass,
+.heading[data-reveal]:not([data-in]) .h-ink-tail,
+.heading[data-reveal]:not([data-in]) .h-ink-blot {
+  transform: scale(0);
+}
+
+.heading[data-reveal]:not([data-in]) .h-ink-drop {
+  transform: translate(var(--fx), var(--fy)) scale(0);
 }
 
 .heading-contact .act-heading {
@@ -492,7 +514,7 @@ a {
 .heading[data-reveal]:not([data-in]) .h-label,
 .heading[data-reveal]:not([data-in]) .h-rule,
 .heading[data-reveal]:not([data-in]) .h-word,
-.heading[data-reveal]:not([data-in]) .h-ink path {
+.heading[data-reveal]:not([data-in]) .h-ink > * {
   transition-duration: 0ms;
   transition-delay: 0ms;
 }
@@ -1562,10 +1584,10 @@ a {
     opacity: 0;
   }
 
-  /* the stroke is simply already there, it fades in with the heading */
-  .h-ink path,
-  .heading[data-reveal]:not([data-in]) .h-ink path {
-    stroke-dashoffset: 0;
+  /* the splat is simply already there, it fades in with the heading */
+  .h-ink > *,
+  .heading[data-reveal]:not([data-in]) .h-ink > * {
+    transform: none;
     transition: none;
   }
 
