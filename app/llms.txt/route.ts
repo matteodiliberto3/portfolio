@@ -15,7 +15,7 @@ export function GET() {
 
 > ${siteDescription}
 
-Matteo Di Liberto lavora a Palermo. Disegna la pagina e scrive il codice, dalla bozza al sito online. La prima conversazione dura trenta minuti, su Google Meet, e si prenota su ${siteUrl}/prenota.
+Matteo Di Liberto è un informatico che lavora come design engineer: si occupa dell’interfaccia, dell’esperienza d’uso e del codice che le regge, dalla bozza al sito online. Lavora a Varese, per clienti in tutta Italia. La prima conversazione dura trenta minuti, su Google Meet, e si prenota su ${siteUrl}/prenota.
 
 - Sito: ${siteUrl}
 - GitHub: ${githubUrl}
@@ -23,7 +23,8 @@ Matteo Di Liberto lavora a Palermo. Disegna la pagina e scrive il codice, dalla 
 
 ## Pagine
 
-- [Home](${siteUrl}/): presentazione, lavori, metodo, domande, contatto
+- [Home](${siteUrl}/): presentazione, lavori, metodo, contatto
+- [Domande](${siteUrl}/domande): le domande che arrivano prima di iniziare
 - [Prenota una chiamata](${siteUrl}/prenota): trenta minuti su Google Meet, orari letti dal calendario
 
 ## Lavori

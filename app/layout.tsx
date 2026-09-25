@@ -34,7 +34,7 @@ const indexable = process.env.VERCEL_ENV !== "preview";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${siteName} — siti e web app, a mano`,
+    default: `${siteName} — design engineer, interfacce e codice a mano`,
     template: `%s — ${siteName}`,
   },
   description: siteDescription,
@@ -50,12 +50,12 @@ export const metadata: Metadata = {
     locale: "it_IT",
     url: siteUrl,
     siteName,
-    title: `${siteName} — siti e web app, a mano`,
+    title: `${siteName} — design engineer, interfacce e codice a mano`,
     description: siteDescription,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteName} — siti e web app, a mano`,
+    title: `${siteName} — design engineer, interfacce e codice a mano`,
     description: siteDescription,
   },
 };

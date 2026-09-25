@@ -142,6 +142,19 @@ a {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid transparent;
+  transition:
+    transform 260ms var(--ease-out),
+    opacity 200ms var(--ease-out);
+}
+
+/* it leaves upward, the way it came, and shorter than it returns */
+.nav[data-hidden] {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 200ms var(--ease-out),
+    opacity 140ms var(--ease-out);
 }
 
 .nav a {
@@ -922,6 +935,11 @@ a {
   border-top: 1px solid var(--line);
 }
 
+/* on its own page the list needs air between the lede and the first question */
+.page .faq-list {
+  margin-top: 32px;
+}
+
 .faq-item {
   display: grid;
   grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
@@ -1591,6 +1609,13 @@ a {
     transform: none;
     transition: opacity 240ms ease;
     transition-delay: 0ms;
+  }
+
+  /* the bar still gets out of the way, but by fading instead of sliding */
+  .nav,
+  .nav[data-hidden] {
+    transform: none;
+    transition: opacity 160ms linear;
   }
 
   .work-curtain,

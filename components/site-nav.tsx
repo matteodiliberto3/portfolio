@@ -1,6 +1,42 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+/* Once the reader is inside the story the bar steps aside, and comes back on the
+ * first scroll up: the sections stay one gesture away instead of being lost. */
+const STORY_STARTS = 0.9; // viewports to scroll before the bar may leave
+const INTENT = 12; // px travelled in one direction before it reacts
+
 export function SiteNav() {
+  const [hidden, setHidden] = useState(false);
+  const mark = useRef(0);
+
+  useEffect(() => {
+    mark.current = window.scrollY;
+    let frame = 0;
+
+    const read = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const travel = y - mark.current;
+      if (Math.abs(travel) < INTENT) return; // a nudge is not a decision
+      mark.current = y;
+      setHidden(travel > 0 && y > window.innerHeight * STORY_STARTS);
+    };
+
+    const onScroll = () => {
+      frame ||= requestAnimationFrame(read);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
-    <nav className="nav" aria-label="Sezioni">
+    <nav className="nav" aria-label="Sezioni" data-hidden={hidden || undefined} inert={hidden}>
       <a className="nav-name" href="#top">
         M. Di Liberto
       </a>
@@ -15,7 +51,7 @@ export function SiteNav() {
           <a href="#metodo">Metodo</a>
         </li>
         <li>
-          <a href="#domande">Domande</a>
+          <a href="/domande">Domande</a>
         </li>
         <li>
           <a className="nav-cta" href="#contatto">

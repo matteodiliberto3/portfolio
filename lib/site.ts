@@ -6,17 +6,17 @@ export const siteUrl = "https://matteodiliberto.it";
 export const siteName = "Matteo Di Liberto";
 
 export const siteDescription =
-  "Matteo Di Liberto, a Palermo, disegna siti e web app e scrive il codice a mano. Cinque lavori online: The Teaching Hub, Krypt Trader Engine, Voltra, B&B Massimo Centro, Studio Picco Bellazzi.";
+  "Matteo Di Liberto è un design engineer a Varese: disegna l’interfaccia e scrive il codice, dalla bozza alla pubblicazione. Cinque lavori online: The Teaching Hub, Krypt Trader Engine, Voltra, B&B Massimo Centro, Studio Picco Bellazzi.";
 
 export const githubUrl = "https://github.com/matteodiliberto3";
 
-export const jobTitle = "Web designer e sviluppatore";
+export const jobTitle = "Design engineer e fullstack engineer";
 
 export const faqs = [
   {
     question: "Chi è Matteo Di Liberto?",
     answer:
-      "Matteo Di Liberto progetta siti e web app a Palermo. Disegna la pagina e scrive il codice, dalla bozza alla pubblicazione, con un solo interlocutore.",
+      "Un informatico che lavora come design engineer: si occupa dell’interfaccia, dell’esperienza d’uso e del codice che le regge, dalla bozza alla pubblicazione, con un solo interlocutore.",
   },
   {
     question: "Che lavori ha online?",
@@ -35,7 +35,7 @@ export const faqs = [
   {
     question: "Dove lavora Matteo Di Liberto?",
     answer:
-      "A Palermo. Tra i lavori per attività: un B&B in Via Mariano Stabile e uno studio legale a Busto Arsizio, dal 1976.",
+      "A Varese, per clienti in tutta Italia. Tra i lavori per attività: un B&B in Via Mariano Stabile a Palermo e uno studio legale a Busto Arsizio, dal 1976.",
   },
 ] as const;
 
@@ -54,11 +54,18 @@ export function personJsonLd() {
     description: siteDescription,
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Palermo",
+      addressLocality: "Varese",
       addressCountry: "IT",
     },
     sameAs: [githubUrl],
-    knowsAbout: ["Next.js", "TypeScript", "Siti web", "Web app", "Web design"],
+    knowsAbout: [
+      "UI design",
+      "UX design",
+      "Design engineering",
+      "Sviluppo fullstack",
+      "Next.js",
+      "TypeScript",
+    ],
   };
 }
 
@@ -82,11 +89,11 @@ export function serviceJsonLd() {
     url: siteUrl,
     image: absoluteUrl("/portrait.jpg"),
     description:
-      "Siti web e web app disegnati e sviluppati a mano, dalla bozza alla pubblicazione.",
+      "Interfacce disegnate e sviluppate a mano, dalla bozza alla pubblicazione: un solo interlocutore tra design e codice.",
     areaServed: { "@type": "Country", name: "Italia" },
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Palermo",
+      addressLocality: "Varese",
       addressCountry: "IT",
     },
     founder: { "@id": `${siteUrl}/#person` },

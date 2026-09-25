@@ -9,7 +9,7 @@ export function Contact() {
     <section className="act contact" id="contatto" aria-labelledby="contact-title">
       <Heading
         id="contact-title"
-        number="05"
+        number="04"
         label="Contatto"
         className="heading-contact"
         accentFrom={3}
@@ -26,7 +26,7 @@ export function Contact() {
         </Link>
       </Reveal>
       <Reveal as="p" className="colophon" delay={240}>
-        Matteo Di Liberto · Palermo · {new Date().getFullYear()}
+        Matteo Di Liberto · Varese · {new Date().getFullYear()}
       </Reveal>
     </section>
   );
