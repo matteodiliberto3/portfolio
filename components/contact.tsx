@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Heading } from "./heading";
 import { Reveal } from "./reveal";
 
-const GITHUB = "https://github.com/matteodiliberto3";
+const PHONE_NUMBER = "tel:+393711500055";
 
 export function Contact() {
   return (
@@ -18,7 +18,7 @@ export function Contact() {
         Hai un’idea? / Mettiamola online.
       </Heading>
       <Reveal className="contact-actions" delay={160}>
-        <a className="cta" href={GITHUB}>
+        <a className="cta" href={PHONE_NUMBER}>
           Scrivimi
         </a>
         <Link className="text-link" href="/prenota">

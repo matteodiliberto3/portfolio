@@ -90,7 +90,7 @@ export default async function WorkPage({
         <a className="ink-link press" href={project.href} target="_blank" rel="noreferrer">
           Apri il sito
         </a>
-        <a className="back press" href="https://github.com/matteodiliberto3">
+        <a className="back press" href="tel:+393711500055">
           Scrivimi
         </a>
       </div>
