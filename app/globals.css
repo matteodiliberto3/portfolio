@@ -411,9 +411,20 @@ html[data-nav-away] .nav,
   justify-items: start;
 }
 
+.opening-eyebrow {
+  color: var(--ink-2);
+}
+
 .display {
   margin: 0;
   font-size: clamp(3.6rem, 9.5vw, 9rem);
+}
+
+.opening-title {
+  font-size: clamp(2.3rem, 4.4vw, 4.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.028em;
+  max-width: 17ch;
 }
 
 .line-mask {

@@ -5,17 +5,17 @@ const steps = [
   {
     n: "1",
     title: "Una chiamata, trenta minuti.",
-    body: "Mi racconti di cosa hai bisogno e io ti consiglio come realizzarlo.",
+    body: "Mi racconti della tua attività e dei tuoi obiettivi: individuiamo insieme la soluzione ideale, con chiarezza e senza gergo tecnico.",
   },
   {
     n: "2",
-    title: "Il primo prodotto in poco tempo.",
-    body: "Potrai vedere un’anteprima del tuo prodotto, per capire se la direzione presa è quella giusta.",
+    title: "Un’anteprima concreta, subito navigabile.",
+    body: "In pochi giorni vedi nascere il sito su uno spazio di prova riservato. Testiamo insieme l’esperienza d’uso e affiniamo ogni dettaglio prima del lancio.",
   },
   {
     n: "3",
     title: "Online, con le chiavi in mano.",
-    body: "Dominio, hosting ed è tutto tuo.",
+    body: "Mi occupo io di dominio, hosting e configurazioni tecniche. A lavoro concluso hai la piena ed esclusiva proprietà di tutto, senza vincoli né costi nascosti.",
   },
 ];
 

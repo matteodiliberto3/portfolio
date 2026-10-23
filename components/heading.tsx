@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { InkSplat } from "./ink-splat";
 import { Reveal } from "./reveal";
 
@@ -42,7 +42,7 @@ export function Heading({
   wordsByLine.forEach((lineWords, lineIndex) => {
     lines.push(
       <span className="h-line" key={lineIndex}>
-        {lineWords.map((word) => {
+        {lineWords.map((word, wordIdx) => {
           const index = cursor++;
           const accent = accentFrom !== undefined && index >= accentFrom;
           const mask = (
@@ -57,34 +57,46 @@ export function Heading({
             </span>
           );
 
-          if (index !== inkAt) return mask;
+          const hasSpace = wordIdx < lineWords.length - 1;
+
+          if (index !== inkAt) {
+            return (
+              <Fragment key={index}>
+                {mask}
+                {hasSpace ? " " : null}
+              </Fragment>
+            );
+          }
 
           /* The mask clips its own overflow, so the splat lives beside it. */
           return (
-            <span className="h-word-slot" key={index} style={{ ["--w" as string]: index }}>
-              {mask}
-              <InkSplat />
-            </span>
+            <Fragment key={index}>
+              <span className="h-word-slot" style={{ ["--w" as string]: index }}>
+                {mask}
+                <InkSplat />
+              </span>
+              {hasSpace ? " " : null}
+            </Fragment>
           );
         })}
       </span>,
     );
   });
 
+  const accessibleText = `${label}. ${children.replace(/\s*\/\s*/g, " ").trim()}`;
+
   return (
     <Reveal as="div" className={`heading ${className ?? ""}`}>
       {hideEyebrow ? null : (
-        <p className="eyebrow h-eyebrow" aria-hidden>
+        <p className="eyebrow h-eyebrow" aria-hidden="true">
           <span className="h-num">( {number} )</span>
           <span className="h-rule" />
           <span className="h-label">{label}</span>
         </p>
       )}
       <h2 id={id} className="act-heading h-text">
-        <span className="sr-only">
-          {label}. {children}
-        </span>
-        <span aria-hidden>{lines}</span>
+        <span className="sr-only">{accessibleText}</span>
+        <span aria-hidden="true">{lines}</span>
       </h2>
     </Reveal>
   );

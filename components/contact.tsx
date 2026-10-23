@@ -12,10 +12,10 @@ export function Contact() {
         number="04"
         label="Contatto"
         className="heading-contact"
-        accentFrom={3}
+        accentFrom={4}
         hideEyebrow
       >
-        Hai un’idea? / Mettiamola online.
+        La tua attività merita / un sito all’altezza.
       </Heading>
       <Reveal className="contact-actions" delay={160}>
         <a className="cta" href={PHONE_NUMBER}>

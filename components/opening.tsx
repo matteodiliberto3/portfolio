@@ -5,24 +5,27 @@ export function Opening() {
   return (
     <Reveal as="section" className="act opening" aria-labelledby="opening-title">
       <div className="opening-copy">
-        <h1 id="opening-title" className="display">
+        <p className="eyebrow opening-eyebrow intro-line" style={{ ["--i" as string]: 1 }}>
+          Matteo Di Liberto · Design &amp; Sviluppo Web
+        </p>
+        <h1 id="opening-title" className="display opening-title">
           <span className="line-mask">
-            <span className="line intro-line" style={{ ["--i" as string]: 1 }}>
-              Matteo
+            <span className="line intro-line" style={{ ["--i" as string]: 2 }}>
+              Il tuo lavoro ha una storia.
             </span>
           </span>
           <span className="line-mask">
-            <span className="line intro-line" style={{ ["--i" as string]: 2 }}>
-              Di Liberto
+            <span className="line intro-line" style={{ ["--i" as string]: 3 }}>
+              Costruiamo il sito che la racconta nel modo giusto.
             </span>
           </span>
         </h1>
-        <p className="lede intro-line" style={{ ["--i" as string]: 3 }}>
-          Disegno la pagina e scrivo il codice, completamente a mano, curando
-          ogni dettaglio così da costruire la narrazione che più si addice al
-          cliente.
+        <p className="lede intro-line" style={{ ["--i" as string]: 4 }}>
+          Niente template preconfezionati o passaggi di mano. Disegno l’interfaccia e scrivo
+          ogni riga di codice su misura per dare alla tua attività una presenza online veloce,
+          solida e autorevole.
         </p>
-        <a className="cta intro-line" style={{ ["--i" as string]: 4 }} href="#contatto">
+        <a className="cta intro-line" style={{ ["--i" as string]: 5 }} href="#contatto">
           Parliamo del tuo progetto
         </a>
       </div>
@@ -37,7 +40,7 @@ export function Opening() {
             sizes="(max-width: 960px) 70vw, 38vw"
           />
         </div>
-        <figcaption className="eyebrow intro-line" style={{ ["--i" as string]: 5 }}>
+        <figcaption className="eyebrow intro-line" style={{ ["--i" as string]: 6 }}>
           Scorri per saperne di più
         </figcaption>
       </figure>

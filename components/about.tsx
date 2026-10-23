@@ -4,26 +4,26 @@ import { Reveal } from "./reveal";
 const facts = [
   {
     k: "01",
-    title: "Faccio la pagina e il codice.",
-    body: "Un solo interlocutore dalla bozza al sito. Niente passaggi tra chi disegna e chi sviluppa.",
+    title: "Un unico interlocutore, zero attriti.",
+    body: "Progetto il design e scrivo il codice in prima persona. Niente rimpalli tra grafico e programmatore: quello che decidiamo insieme in bozza è esattamente ciò che va online.",
   },
   {
     k: "02",
-    title: "Per attività vere e per prodotti miei.",
-    body: "Un B&B a Palermo, uno studio legale a Busto Arsizio. E dall’altra parte un hub tecnico e un motore quantitativo.",
+    title: "Rigore ingegneristico, applicato alla tua attività.",
+    body: "Sviluppo piattaforme tecnologiche complesse e porto quella stessa solidità e cura nei siti di studi professionali, attività ricettive e imprese che vogliono distinguersi.",
   },
   {
     k: "03",
-    title: "Con un occhio alla sicurezza.",
-    body: "Cookie httpOnly, rate limit, CSP: nel Teaching Hub li spiego. Nei siti dei clienti li metto.",
+    title: "Veloce, sicuro e senza manutenzione continua.",
+    body: "Niente siti appesantiti da decine di plugin fragili che si rompono a ogni aggiornamento. Scrivo codice pulito e sicuro fin dalle fondamenta perché il tuo sito si carichi in un istante e duri nel tempo.",
   },
 ];
 
 export function About() {
   return (
     <section className="act about" id="chi-sono" aria-labelledby="about-title">
-      <Heading id="about-title" number="01" label="Chi sono" inkAt={1} hideEyebrow>
-        Dallo schizzo / all’opera d’arte.
+      <Heading id="about-title" number="01" label="Chi sono" inkAt={2} hideEyebrow>
+        Dalla prima bozza / al sito online.
       </Heading>
       <ol className="facts-grid">
         {facts.map((f, i) => (

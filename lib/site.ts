@@ -6,37 +6,37 @@ export const siteUrl = "https://matteodiliberto.it";
 export const siteName = "Matteo Di Liberto";
 
 export const siteDescription =
-  "Matteo Di Liberto è un design engineer a Varese: disegna l’interfaccia e scrive il codice, dalla bozza alla pubblicazione. Cinque lavori online: The Teaching Hub, Krypt Trader Engine, Voltra, B&B Massimo Centro, Studio Picco Bellazzi.";
+  "Matteo Di Liberto progetta e sviluppa siti web su misura a Varese e in tutta Italia: design curato, codice pulito e nessun intermediario tra la prima bozza e la messa online.";
 
 export const githubUrl = "https://github.com/matteodiliberto3";
 
-export const jobTitle = "Design engineer e fullstack engineer";
+export const jobTitle = "Siti web su misura · Design & Sviluppo";
 
 export const faqs = [
   {
     question: "Chi è Matteo Di Liberto?",
     answer:
-      "Un informatico che lavora come design engineer: si occupa dell’interfaccia, dell’esperienza d’uso e del codice che le regge, dalla bozza alla pubblicazione, con un solo interlocutore.",
+      "Un designer e sviluppatore web su misura a Varese: progetta l'interfaccia e scrive il codice in prima persona, dalla prima bozza alla messa online, garantendo un unico interlocutore senza filtri né intermediari.",
   },
   {
     question: "Che lavori ha online?",
     answer:
-      "The Teaching Hub, laboratori interattivi per padroneggiare concetti complessi di ingegneria del software; Krypt Trader Engine, un motore algoritmico per il trading quantitativo; Voltra, un e-commerce minimal ed elegante ideale per elettronica di alto profilo; la piattaforma digitale del B&B Massimo Centro a Palermo e un re-design della pagina web dello studio Picobellazzi sito in Busto Arsizio.",
+      "Tra i progetti online: la nuova presenza digitale per lo storico Studio Legale Picco Bellazzi a Busto Arsizio, il sito di presentazione e richiesta disponibilità per il B&B Massimo Centro a Palermo, il concept store Voltra, e progetti proprietari ad alta intensità tecnica come The Teaching Hub e Krypt Trader Engine.",
   },
   {
     question: "Come si inizia un progetto?",
     answer:
-      "Con una chiamata di trenta minuti su Google Meet. Si sceglie giorno e orario sulla pagina Prenota: gli slot liberi arrivano dal calendario.",
+      "Con una chiamata di trenta minuti su Google Meet. Si sceglie giorno e orario sulla pagina Prenota: gli slot disponibili arrivano in tempo reale dal calendario.",
   },
   {
     question: "Cosa resta al cliente a fine lavoro?",
     answer:
-      "Dominio, hosting, sito, applicazione o progetto, in base a quale fosse l'esigenza del cliente.",
+      "La piena ed esclusiva titolarità di tutto: dominio, hosting, grafica, testi e codice sorgente, senza vincoli contrattuali né canoni nascosti.",
   },
   {
     question: "Dove lavora Matteo Di Liberto?",
     answer:
-      "A Varese, per clienti in tutta Italia. Tra i lavori per attività: un B&B in Via Mariano Stabile a Palermo e uno studio legale a Busto Arsizio, dal 1976.",
+      "A Varese, collaborando da remoto e di persona con professionisti, studi e attività in tutta Italia.",
   },
 ] as const;
 
@@ -60,10 +60,10 @@ export function personJsonLd() {
     },
     sameAs: [githubUrl],
     knowsAbout: [
+      "Siti web su misura",
       "UI design",
       "UX design",
-      "Design engineering",
-      "Sviluppo fullstack",
+      "Sviluppo web frontend",
       "Next.js",
       "TypeScript",
     ],
@@ -90,7 +90,7 @@ export function serviceJsonLd() {
     url: siteUrl,
     image: absoluteUrl("/portrait.jpg"),
     description:
-      "Interfacce disegnate e sviluppate a mano, dalla bozza alla pubblicazione: un solo interlocutore tra design e codice.",
+      "Siti web e interfacce digitali su misura, dalla prima bozza alla pubblicazione: un solo interlocutore tra design e codice.",
     areaServed: { "@type": "Country", name: "Italia" },
     address: {
       "@type": "PostalAddress",
@@ -104,15 +104,17 @@ export function serviceJsonLd() {
         itemOffered: {
           "@type": "Service",
           name: "Sito web su misura",
-          description: "Pagina, testi e codice, con dominio e hosting intestati al cliente.",
+          description:
+            "Design dell'interfaccia, testi e codice su misura, con dominio e hosting intestati al cliente.",
         },
       },
       {
         "@type": "Offer",
         itemOffered: {
           "@type": "Service",
-          name: "Web app",
-          description: "Applicazione web in Next.js e TypeScript, dall’interfaccia al deploy.",
+          name: "Web app su misura",
+          description:
+            "Applicazione web in Next.js e TypeScript, progettata e sviluppata per elevate prestazioni e sicurezza.",
         },
       },
     ],

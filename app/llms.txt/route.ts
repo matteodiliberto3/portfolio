@@ -15,7 +15,7 @@ export function GET() {
 
 > ${siteDescription}
 
-Matteo Di Liberto è un informatico che lavora come design engineer: si occupa dell’interfaccia, dell’esperienza d’uso e del codice che le regge, dalla bozza al sito online. Lavora a Varese, per clienti in tutta Italia. La prima conversazione dura trenta minuti, su Google Meet, e si prenota su ${siteUrl}/prenota.
+Matteo Di Liberto progetta e sviluppa siti web su misura: design curato, codice pulito e nessun intermediario tra la prima bozza e la messa online. Lavora a Varese, per clienti in tutta Italia. La prima conversazione dura trenta minuti, su Google Meet, e si prenota su ${siteUrl}/prenota.
 
 - Sito: ${siteUrl}
 - GitHub: ${githubUrl}

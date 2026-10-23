@@ -7,7 +7,7 @@ export function Works({ projects }: { projects: Project[] }) {
   return (
     <section className="act works" id="lavori" aria-labelledby="works-title">
       <Heading id="works-title" number="02" label="Lavori" hideEyebrow>
-        Alcuni dei / miei lavori.
+        Progetti selezionati, / costruiti su misura.
       </Heading>
 
       <ol className="work-list">
