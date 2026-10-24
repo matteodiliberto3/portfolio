@@ -5,15 +5,15 @@
  * Without support, the text is simply visible.
  *
  * The question exists before its words: a giant "?" is pressed into the
- * paper from the moment the panel enters, takes ink while "Come nasce…" is
- * written, and settles away once "il tuo sito?" gives it a voice.
+ * paper from the moment the panel enters, takes ink while "Ma quindi…" is
+ * written, and settles away once "lavoro?" gives it a voice.
  */
-const LINE_1 = ["Come", "nasce"];
-const LINE_2 = ["il", "tuo", "sito?"];
+const LINE_1 = ["Ma", "quindi"];
+const LINE_2 = ["come", "lavoro?"];
 
 export function Interlude() {
   return (
-    <section className="interlude" aria-label="Come nasce il tuo sito?">
+    <section className="interlude" aria-label="Ma quindi, come lavoro?">
       <div className="interlude-track">
         <div className="interlude-panel">
           <span className="interlude-mark" aria-hidden="true">
