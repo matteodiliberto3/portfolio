@@ -106,8 +106,8 @@ a {
 }
 
 .cta:hover {
-  background: transparent;
-  color: var(--ink);
+  background: #000;
+  color: var(--paper);
 }
 
 .text-link {
@@ -198,7 +198,7 @@ html[data-nav-away] .nav,
     color 240ms var(--ease-out);
 }
 
-.nav-links a:hover {
+.nav-links a:not(.nav-cta):hover {
   color: var(--ink);
 }
 
@@ -220,11 +220,15 @@ html[data-nav-away] .nav,
   border-radius: 4px;
   border: 1px solid var(--ink);
   color: var(--ink);
+  background: transparent;
+  transition: background 180ms ease, color 180ms ease;
 }
 
-.nav-cta:hover {
+.nav-cta:hover,
+.nav-links a.nav-cta:hover,
+.nav-links a.nav-cta:focus-visible {
   background: var(--ink);
-  color: var(--paper);
+  color: var(--paper) !important;
 }
 
 /* ---------- acts ---------- */
