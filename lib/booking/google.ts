@@ -1,28 +1,30 @@
 import "server-only";
 import { isIgnoredTitle, rules, type Interval } from "./rules";
 
+const clean = (s?: string) => s?.trim().replace(/^["']|["']$/g, "");
+
 /**
  * Minimal Google Calendar client over REST. Server-only: the refresh token
  * never leaves the server. Configured through environment variables; when
  * they are missing the booking flow runs in demo mode (see availability.ts).
  */
 const env = {
-  clientId: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+  clientId: clean(process.env.GOOGLE_CLIENT_ID),
+  clientSecret: clean(process.env.GOOGLE_CLIENT_SECRET),
+  refreshToken: clean(process.env.GOOGLE_REFRESH_TOKEN),
   /** where bookings are written */
-  calendarId: process.env.GOOGLE_CALENDAR_ID ?? "primary",
+  calendarId: clean(process.env.GOOGLE_CALENDAR_ID) ?? "primary",
   /**
    * every calendar that counts as "busy": the booking calendar plus any
    * others (e.g. a subscribed university timetable), comma-separated
    */
   busyCalendarIds: Array.from(
     new Set([
-      process.env.GOOGLE_CALENDAR_ID ?? "primary",
+      clean(process.env.GOOGLE_CALENDAR_ID) ?? "primary",
       ...(process.env.GOOGLE_BUSY_CALENDAR_IDS ?? "")
         .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+        .map((s) => clean(s))
+        .filter((s): s is string => Boolean(s)),
     ]),
   ),
 };
@@ -46,7 +48,10 @@ async function accessToken() {
     }),
     cache: "no-store",
   });
-  if (!res.ok) throw new Error(`google token ${res.status}`);
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`google token ${res.status}: ${errBody}`);
+  }
   const json = (await res.json()) as { access_token: string; expires_in: number };
   cached = { token: json.access_token, exp: Date.now() + json.expires_in * 1000 };
   return cached.token;
