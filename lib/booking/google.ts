@@ -50,11 +50,7 @@ async function accessToken() {
   });
   if (!res.ok) {
     const errBody = await res.text();
-    const mask = (s?: string) =>
-      s ? `${s.slice(0, 6)}...${s.slice(-4)} (len ${s.length})` : "MISSING";
-    throw new Error(
-      `google token ${res.status}: ${errBody} [diagnostica: id=${mask(env.clientId)}, secret=${mask(env.clientSecret)}, refresh=${mask(env.refreshToken)}]`,
-    );
+    throw new Error(`google token ${res.status}: ${errBody}`);
   }
   const json = (await res.json()) as { access_token: string; expires_in: number };
   cached = { token: json.access_token, exp: Date.now() + json.expires_in * 1000 };

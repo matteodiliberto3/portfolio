@@ -24,7 +24,6 @@ export async function GET(req: NextRequest) {
     );
   } catch (err) {
     console.error("[disponibilita]", err);
-    const detail = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: "Calendario non raggiungibile.", detail }, { status: 502 });
+    return Response.json({ error: "Calendario non raggiungibile." }, { status: 502 });
   }
 }
