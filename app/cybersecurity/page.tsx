@@ -5,12 +5,12 @@ import { LaraconCybersecSite } from "@/components/laboratorio/laracon-cybersec-s
 export const metadata: Metadata = {
   title: "Cybersecurity — Matteo Di Liberto",
   description:
-    "Offensive Security, penetration testing manuale e analisi delle vulnerabilità di logica applicativa per software critico.",
+    "Il mondo digitale è cambiato. Verifiche di sicurezza su sistemi, accessi e applicazioni per aiutare imprese, startup e organizzazioni a individuare i rischi prima che diventino un problema.",
   alternates: { canonical: "/cybersecurity" },
   openGraph: {
     title: "Cybersecurity — Matteo Di Liberto",
     description:
-      "Offensive Security, penetration testing manuale e analisi delle vulnerabilità di logica applicativa per software critico.",
+      "Il mondo digitale è cambiato. Verifiche di sicurezza su sistemi, accessi e applicazioni per aiutare imprese, startup e organizzazioni a individuare i rischi prima che diventino un problema.",
     url: "/cybersecurity",
   },
 };
@@ -60,7 +60,7 @@ export default function CybersecurityPage() {
             ← TORNA AL SITO
           </Link>
           <span style={{ fontSize: "11px", color: "#7C797A", letterSpacing: "0.08em" }}>
-            CYBERSECURITY // OFFENSIVE SECURITY 2026
+            CYBERSECURITY // CONSAPEVOLEZZA E VERIFICA
           </span>
         </div>
 
@@ -80,7 +80,7 @@ export default function CybersecurityPage() {
             textTransform: "uppercase",
           }}
         >
-          PRENOTA AUDIT (30 MIN) →
+          PRENOTA UN PRIMO CONFRONTO →
         </Link>
       </header>
 

