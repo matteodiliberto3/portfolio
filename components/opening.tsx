@@ -8,22 +8,23 @@ export function Opening() {
         <h1 id="opening-title" className="display opening-title">
           <span className="line-mask">
             <span className="line intro-line" style={{ ["--i" as string]: 1 }}>
-              Il tuo lavoro ha una storia.
+              La sicurezza del software
             </span>
           </span>
           <span className="line-mask">
             <span className="line intro-line" style={{ ["--i" as string]: 2 }}>
-              Costruiamo il sito che la racconta nel modo giusto.
+              si misura contro un attaccante reale.
             </span>
           </span>
         </h1>
         <p className="lede intro-line" style={{ ["--i" as string]: 3 }}>
-          Niente template preconfezionati o passaggi di mano. Disegno l’interfaccia e scrivo
-          ogni riga di codice su misura per dare alla tua attività una presenza online veloce,
-          solida e autorevole.
+          Conduco penetration test manuali, audit del codice e hardening infrastrutturale
+          per team che trattano flussi e dati critici. Niente report generati da scanner
+          automatici: proof-of-concept documentati, matrici di rischio concrete e supporto
+          diretto agli sviluppatori per risolvere le vulnerabilità prima del rilascio.
         </p>
         <a className="cta intro-line" style={{ ["--i" as string]: 4 }} href="#contatto">
-          Parliamo del tuo progetto
+          Richiedi un assessment di sicurezza
         </a>
       </div>
 

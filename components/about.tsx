@@ -4,26 +4,26 @@ import { Reveal } from "./reveal";
 const facts = [
   {
     k: "01",
-    title: "Un unico interlocutore, zero attriti.",
-    body: "Progetto il design e scrivo il codice in prima persona. Niente rimpalli tra grafico e programmatore: quello che decidiamo insieme in bozza è esattamente ciò che va online.",
+    title: "Penetration Testing senza falsi positivi.",
+    body: "Gli scanner automatici segnalano centinaia di avvisi inutili e mancano le falle critiche. Conduco test d'intrusione manuali per violare la logica applicativa, l'autenticazione e i permessi, dimostrando l'impatto reale di ogni vulnerabilità.",
   },
   {
     k: "02",
-    title: "Rigore ingegneristico, applicato alla tua attività.",
-    body: "Sviluppo piattaforme tecnologiche complesse e porto quella stessa solidità e cura nei siti di studi professionali, attività ricettive e imprese che vogliono distinguersi.",
+    title: "Code Review & DevSecOps automatizzato.",
+    body: "Revisiono i sorgenti prima del deploy e introduco gate di sicurezza nelle pipeline di Continuous Integration. Non mi limito a segnalare il bug: fornisco il codice corretto per sanificare gli endpoint ed eliminare i rischi alla radice.",
   },
   {
     k: "03",
-    title: "Veloce, sicuro e senza manutenzione continua.",
-    body: "Niente siti appesantiti da decine di plugin fragili che si rompono a ogni aggiornamento. Scrivo codice pulito e sicuro fin dalle fondamenta perché il tuo sito si carichi in un istante e duri nel tempo.",
+    title: "Cloud Hardening & Sicurezza per Modelli AI.",
+    body: "Proteggo le superfici d'attacco moderne: configurazioni cloud AWS/GCP, isolamento di container Kubernetes e difese contro attacchi specifici per pipeline MLOps e LLM (prompt injection, manipolazione dei dati di training ed exfiltration).",
   },
 ];
 
 export function About() {
   return (
     <section className="act about" id="chi-sono" aria-labelledby="about-title">
-      <Heading id="about-title" number="01" label="Chi sono" inkAt={2} hideEyebrow>
-        Dalla prima bozza / al sito online.
+      <Heading id="about-title" number="01" label="Competenze & Servizi" inkAt={2} hideEyebrow>
+        Dall’analisi del perimetro / alla chiusura delle falle.
       </Heading>
       <ol className="facts-grid">
         {facts.map((f, i) => (

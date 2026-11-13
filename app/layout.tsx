@@ -11,7 +11,7 @@ import {
 } from "@/lib/site";
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Antonio, Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,12 +30,18 @@ const instrumentSerif = Instrument_Serif({
   weight: "400",
 });
 
+const antonio = Antonio({
+  variable: "--font-antonio",
+  subsets: ["latin"],
+  weight: ["700"],
+});
+
 const indexable = process.env.VERCEL_ENV !== "preview";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${siteName} — Siti web su misura, design e sviluppo senza intermediari`,
+    default: `${siteName} — Cybersecurity Engineer & Penetration Testing`,
     template: `%s — ${siteName}`,
   },
   description: siteDescription,
@@ -51,12 +57,12 @@ export const metadata: Metadata = {
     locale: "it_IT",
     url: siteUrl,
     siteName,
-    title: `${siteName} — Siti web su misura, design e sviluppo senza intermediari`,
+    title: `${siteName} — Cybersecurity Engineer & Penetration Testing`,
     description: siteDescription,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteName} — Siti web su misura, design e sviluppo senza intermediari`,
+    title: `${siteName} — Cybersecurity Engineer & Penetration Testing`,
     description: siteDescription,
   },
 };
@@ -70,7 +76,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="it"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${antonio.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <JsonLd

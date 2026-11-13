@@ -15,14 +15,14 @@ export function Contact() {
         accentFrom={4}
         hideEyebrow
       >
-        La tua attività merita / un sito all’altezza.
+        I tuoi sistemi meritano / difese all’altezza.
       </Heading>
       <Reveal className="contact-actions" delay={160}>
         <a className="cta" href={PHONE_NUMBER}>
-          Scrivimi
+          Contattami direttamente
         </a>
         <Link className="text-link" href="/prenota">
-          Prenota una chiamata
+          Prenota una sessione tecnica
         </Link>
       </Reveal>
       <Reveal as="p" className="colophon" delay={240}>

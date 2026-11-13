@@ -5,14 +5,14 @@ import { PageLink } from "@/components/page-link";
 import { faqJsonLd, faqs, graphJsonLd } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Domande",
+  title: "Domande frequenti",
   description:
-    "Chi sono, che lavori ho online, come si inizia un progetto e cosa resta al cliente a fine lavoro.",
+    "Chi sono, metodologia di penetration testing, report di sicurezza e modalità di ingaggio.",
   alternates: { canonical: "/domande" },
   openGraph: {
-    title: "Domande — Matteo Di Liberto",
+    title: "Domande frequenti — Matteo Di Liberto",
     description:
-      "Chi sono, che lavori ho online, come si inizia un progetto e cosa resta al cliente a fine lavoro.",
+      "Chi sono, metodologia di penetration testing, report di sicurezza e modalità di ingaggio.",
     url: "/domande",
   },
 };
@@ -26,11 +26,11 @@ export default function FaqPage() {
       </PageLink>
       <h1>Domande</h1>
       <p className="detail">
-        Le cose che mi vengono chieste prima di iniziare. Se ne manca una, scrivimi.
+        I chiarimenti essenziali prima di avviare un security assessment. Se hai una richiesta specifica, contattami.
       </p>
       <dl className="faq-list">
         {faqs.map((item) => {
-          const consult = item.question === "Come si inizia un progetto?";
+          const consult = item.question === "Come si avvia una collaborazione?";
           return (
             <div className={consult ? "faq-item faq-item-consult" : "faq-item"} key={item.question}>
               <dt>

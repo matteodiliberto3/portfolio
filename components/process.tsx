@@ -4,26 +4,26 @@ import { Reveal } from "./reveal";
 const steps = [
   {
     n: "1",
-    title: "Una chiamata, trenta minuti.",
-    body: "Mi racconti della tua attività e dei tuoi obiettivi: individuiamo insieme la soluzione ideale, con chiarezza e senza gergo tecnico.",
+    title: "Scoping riservato & regole d’ingaggio.",
+    body: "Definiamo il perimetro esatto dei test (domini, API, ambienti di staging o produzione) e firmiamo un NDA per proteggere la riservatezza totale dei tuoi asset.",
   },
   {
     n: "2",
-    title: "Un’anteprima concreta, subito navigabile.",
-    body: "In pochi giorni vedi nascere il sito su uno spazio di prova riservato. Testiamo insieme l’esperienza d’uso e affiniamo ogni dettaglio prima del lancio.",
+    title: "Offensive Testing & Proof-of-Concept.",
+    body: "Simulo attacchi manuali per aggirare autenticazione, controlli di ruolo e logiche applicative. Ogni falla scoperta viene documentata con passaggi esatti di riproduzione.",
   },
   {
     n: "3",
-    title: "Online, con le chiavi in mano.",
-    body: "Mi occupo io di dominio, hosting e configurazioni tecniche. A lavoro concluso hai la piena ed esclusiva proprietà di tutto, senza vincoli né costi nascosti.",
+    title: "Report di remediation & Re-Test di verifica.",
+    body: "Ricevi un report manageriale sintetico e una guida tecnica per il team di sviluppo. Una volta applicate le patch, eseguo un re-test gratuito per certificare che le vulnerabilità siano chiuse.",
   },
 ];
 
 export function Process() {
   return (
     <section className="act process" id="metodo" aria-labelledby="process-title">
-      <Heading id="process-title" number="03" label="Come lavoro" hideEyebrow>
-        Tre passi. / Nessun salto nel vuoto.
+      <Heading id="process-title" number="03" label="Metodo di lavoro" hideEyebrow>
+        Tre fasi. / Zero incertezze sulla sicurezza.
       </Heading>
       <ol className="steps">
         <Reveal as="span" className="steps-rail" delay={0} />

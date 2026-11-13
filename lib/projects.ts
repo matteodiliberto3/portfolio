@@ -2,7 +2,7 @@ export type Project = {
   slug: string;
   index: string;
   title: string;
-  kind: "Web app" | "Sito web";
+  kind: "Security Audit" | "DevSecOps" | "Web app" | "Research & Lab";
   status: "live" | "boot";
   year: string;
   role: string;
@@ -18,109 +18,109 @@ export type Project = {
 
 export const projects: Project[] = [
   {
-    slug: "picco-bellazzi",
+    slug: "api-security-audit",
     index: "01",
-    title: "Studio Picco Bellazzi",
-    kind: "Sito web",
+    title: "FinTech & SaaS API Penetration Test",
+    kind: "Security Audit",
     status: "live",
     year: "2026",
-    role: "Sito e testi",
-    stack: ["Sito", "Recensioni"],
-    claim: "Cinquant’anni di studio, detti con calma e autorevolezza.",
+    role: "Offensive Security & Remediation",
+    stack: ["Penetration Testing", "API Security", "OWASP Top 10", "Burp Suite Pro"],
+    claim: "Trovare le falle nella logica applicativa prima che vengano sfruttate.",
     summary:
-      "Portare online cinquant'anni di storia forense con un'interfaccia sobria, autorevole e immediata per i clienti dello studio.",
+      "Security assessment manuale su API REST e microservizi per una piattaforma ad alta intensità di transazioni e dati sensibili.",
     detail:
-      "Il nome in un serif grande sopra una sala di lettura sbiadita. Filosofia, aree dello studio, recensioni dei clienti e un percorso chiaro per richiedere un contatto.",
+      "Verifica sistematica contro Broken Object Level Authorization (BOLA/IDOR), bypass di rate limiting e privilege escalation orizzontale. Proof-of-concept completi forniti per ogni vettore.",
     problem:
-      "Uno studio con cinquant’anni di storia rischiava, online, di sembrare uno studio qualsiasi senza trasmettere il proprio prestigio.",
+      "Gli scanner automatici restituivano report privi di contesto e non rilevavano le falle nei controlli di autorizzazione a più livelli.",
     answer:
-      "Un’identità digitale sobria e senza fronzoli, dove l'esperienza dello studio e le parole dei clienti prendono il posto delle promesse generiche.",
-    href: "https://picobellazzisite.onrender.com/",
-    still: "/stills/picobellazzi.png",
+      "Un penetration test manuale guidato dalla logica di business: identificate 3 vulnerabilità ad alto impatto e fornite le patch pronte per il merge nel codice.",
+    href: "/prenota",
+    still: "/stills/teaching-hub.png",
   },
   {
-    slug: "bb-massimo-centro",
+    slug: "ci-devsecops-pipeline",
     index: "02",
-    title: "B&B Massimo Centro",
-    kind: "Sito web",
+    title: "DevSecOps & Automated Diff Security",
+    kind: "DevSecOps",
     status: "live",
     year: "2026",
-    role: "Sito e richiesta disponibilità",
-    stack: ["Sito", "Modulo prenotazioni"],
-    claim: "Palermo, e un’accoglienza che parte dall’interfaccia.",
+    role: "Architettura di Sicurezza CI/CD",
+    stack: ["DevSecOps", "GitHub Actions", "SAST / DAST", "Automated Pentest"],
+    claim: "Sicurezza continua: ogni pull request viene verificata prima del merge.",
     summary:
-      "Presenza digitale elegante per una boutique stay nel centro di Palermo: camere in evidenza e richiesta disponibilità diretta.",
+      "Integrazione di controlli di sicurezza automatizzati nelle pipeline di continuous integration senza rallentare il ciclo di sviluppo.",
     detail:
-      "Hero sul Teatro Politeama con la riga “Sentirsi a casa, nel cuore di Palermo.” Tre tipologie: Suite Massimo, Camera Verdi, Loft Teatro. L’indirizzo esatto arriva in conferma.",
+      "Implementazione di security gates per verificare differenziali di codice su PR: test di iniezioni (SQLi, XSS), controllo delle dipendenze vulnerabili e generazione di SARIF report conformi.",
     problem:
-      "Il titolare riceveva richieste sparse e doveva ripetere a mano le stesse informazioni a ogni ospite.",
+      "I team di sviluppo rilasciavano funzionalità rapidamente ma le vulnerabilità venivano scoperte solo mesi dopo in produzione.",
     answer:
-      "Spazi illustrati con trasparenza e un modulo guidato per date e preferenze: la prima risposta all'ospite è già una conferma precisa.",
-    href: "https://bb-massimo-centro.onrender.com/",
-    still: "/stills/bb-massimo.png",
-  },
-  {
-    slug: "voltra",
-    index: "03",
-    title: "Voltra",
-    kind: "Web app",
-    status: "live",
-    year: "2026",
-    role: "Marchio e vetrina",
-    stack: ["Vetrina", "Carrello"],
-    claim: "Una cuffia, tanto vuoto intorno.",
-    summary:
-      "Concept store di elettronica di alta gamma: design essenziale, tipografia decisa e zero distrazioni dall'oggetto.",
-    detail:
-      "Sfondo chiaro, un prodotto in primo piano e una navigazione essenziale: VOLTRA, Home e Shop. Nessun rumore visivo, solo valore percepito.",
-    problem:
-      "Un prodotto di fascia alta si svaluta se la pagina lo mette in mezzo al rumore visivo.",
-    answer:
-      "Una schermata sola, un prodotto, due voci di menu. Il resto è respiro e tipografia.",
-    href: "https://voltra.onrender.com/",
+      "Una pipeline DevSecOps calibrata: feedback immediato nel diff dello sviluppatore con test di exploit verificati e zero falsi allarmi bloccanti.",
+    href: "/prenota",
     still: "/stills/voltra.png",
   },
   {
     slug: "the-teaching-hub",
-    index: "04",
-    title: "The Teaching Hub",
-    kind: "Web app",
+    index: "03",
+    title: "The Teaching Hub — Security Sandbox",
+    kind: "Research & Lab",
     status: "live",
     year: "2026",
-    role: "Idea, interfaccia, codice",
-    stack: ["Next.js", "Sandpack", "TypeScript"],
-    claim: "Insegnare architetture software senza slide.",
+    role: "Ingegneria del Software & Sicurezza",
+    stack: ["Next.js", "TypeScript", "Cryptography", "CORS / CSP"],
+    claim: "Sperimentare la sicurezza del web direttamente nel browser.",
     summary:
-      "Piattaforma interattiva per l'ingegneria del software: architetture distribuite, sicurezza avanzata e laboratori nel browser.",
+      "Piattaforma interattiva di sicurezza applicativa: dimostrazioni in vivo di crittografia, CORS/CSP, rate limiting distribuito e token JWT protetti.",
     detail:
-      "Quattro moduli: Event-Driven Architecture, architetture frontend oltre la SPA, design pattern con il flusso animato, e cybersecurity dentro il flusso (JWT in cookie sicuri, sanitizzazione, rate limit, CORS e CSP).",
+      "Ambiente di laboratorio nel browser con contratti JSON reali, sandbox isolate e scenari di exploit e difesa passo-passo per ingegneri del software.",
     problem:
-      "Chi studia architetture legge definizioni teoriche e non sperimenta mai i trade-off pratici.",
+      "La teoria sulla sicurezza web è spesso astratta: gli sviluppatori faticano a visualizzare come un header mal configurato apra varchi critici.",
     answer:
-      "Ogni modulo mostra il contratto JSON, il codice reale e un playground interattivo che gira nella pagina.",
+      "Laboratori interattivi che simulano le difese in tempo reale: manipolazione di cookie HttpOnly, implementazione di Content Security Policy rigide e sanitizzazione.",
     href: "https://the-teaching-hub.vercel.app/",
     still: "/stills/teaching-hub.png",
   },
   {
     slug: "krypt-trader-engine",
-    index: "05",
-    title: "Krypt Trader Engine",
+    index: "04",
+    title: "Krypt — Resilient Financial Infrastructure",
     kind: "Web app",
     status: "boot",
     year: "2026",
-    role: "Motore e interfaccia",
-    stack: ["Next.js", "Dati di mercato"],
-    claim: "Rigore computazionale per mercati complessi.",
+    role: "Infrastruttura Sicura & Motore Quant",
+    stack: ["Zero-Trust", "Crittografia", "Next.js", "Audit Log"],
+    claim: "Integrità computazionale e protezione crittografica dei dati.",
     summary:
-      "Motore quantitativo proprietario: analisi ed esecuzione di strategie per mercati finanziari.",
+      "Infrastruttura di analisi finanziaria ad alte prestazioni progettata con architettura zero-trust, canale crittografato e logging immutabile.",
     detail:
-      "Aprendo l’indirizzo si legge una riga sola, al centro del nero: Initializing Quant Engine. Il progetto è online, l’interfaccia operativa non è ancora la home pubblica.",
+      "Protezione dei flussi di mercato e delle chiavi API di esecuzione: isolamento dei processi critici, gestione dei segreti con rotazione automatica e monitoraggio delle anomalie.",
     problem:
-      "Leggere il mercato a mano è lento, impreciso e influenzato da bias cognitivi.",
+      "Le comunicazioni con feed esterni e l'esecuzione di ordini algoritmici sono esposte a spoofing, replay attack e data tampering.",
     answer:
-      "Il motore analizza i flussi in tempo reale. La pagina pubblica mostra l’avvio del sistema, preservando l'infrastruttura sottostante.",
+      "Architettura blindata a livello di socket e memoria: autenticazione reciproca mTLS, payload firmati e barriere contro accessi non autorizzati.",
     href: "https://krypt-trader-engine.vercel.app/",
     still: "/stills/krypt.png",
+  },
+  {
+    slug: "ai-llm-security",
+    index: "05",
+    title: "AI & MLOps Threat Assessment",
+    kind: "Security Audit",
+    status: "live",
+    year: "2026",
+    role: "Ricerca & Hardening Modelli AI",
+    stack: ["Prompt Injection Defense", "RAG Security", "MLOps", "Model Hardening"],
+    claim: "Difendere gli agenti autonomi e i modelli linguistici da exploit emergenti.",
+    summary:
+      "Valutazione della sicurezza per applicazioni basate su LLM: mitigazione di indirect prompt injection, data exfiltration e violazioni della sandbox.",
+    detail:
+      "Audit mirato delle pipeline di Retrieval-Augmented Generation (RAG) e dei tool agentici: inserimento di guardrail semantici, sanitizzazione del contesto esterno e validazione rigida delle chiamate API.",
+    problem:
+      "L'adozione di assistenti AI espone le aziende a nuovi vettori: prompt malevoli nascosti nei documenti possono dirottare le decisioni del modello.",
+    answer:
+      "Implementazione di difese a più strati: validazione a monte, sandbox con privilegi minimi per gli agenti e filtri di output per evitare fughe di segreti.",
+    href: "/prenota",
+    still: "/stills/bb-massimo.png",
   },
 ];
 

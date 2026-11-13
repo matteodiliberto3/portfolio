@@ -6,37 +6,37 @@ export const siteUrl = "https://matteodiliberto.it";
 export const siteName = "Matteo Di Liberto";
 
 export const siteDescription =
-  "Matteo Di Liberto progetta e sviluppa siti web su misura a Varese e in tutta Italia: design curato, codice pulito e nessun intermediario tra la prima bozza e la messa online.";
+  "Matteo Di Liberto — Ingegnere informatico e consulente di Cybersecurity: Penetration Testing, Audit del codice, DevSecOps e messa in sicurezza di infrastrutture cloud e sistemi AI.";
 
 export const githubUrl = "https://github.com/matteodiliberto3";
 
-export const jobTitle = "Siti web su misura · Design & Sviluppo";
+export const jobTitle = "Cybersecurity Engineer · Penetration Testing & Security Advisory";
 
 export const faqs = [
   {
     question: "Chi è Matteo Di Liberto?",
     answer:
-      "Un designer e sviluppatore web su misura a Varese: progetta l'interfaccia e scrive il codice in prima persona, dalla prima bozza alla messa online, garantendo un unico interlocutore senza filtri né intermediari.",
+      "Ingegnere informatico specializzato in Cybersecurity, MLOps e architetture resilienti. Conduco penetration test manuali, revisioni del codice sorgente e audit di sicurezza per aziende e team di sviluppo che trattano dati e flussi critici.",
   },
   {
-    question: "Che lavori ha online?",
+    question: "Quali servizi di Cybersecurity offri?",
     answer:
-      "Tra i progetti online: la nuova presenza digitale per lo storico Studio Legale Picco Bellazzi a Busto Arsizio, il sito di presentazione e richiesta disponibilità per il B&B Massimo Centro a Palermo, il concept store Voltra, e progetti proprietari ad alta intensità tecnica come The Teaching Hub e Krypt Trader Engine.",
+      "Penetration testing per applicazioni web e API (OWASP Top 10 e fallacie di logica applicativa), audit del codice sorgente e pipeline DevSecOps, hardening di infrastrutture cloud/container, e security assessment per sistemi e modelli AI/ML.",
   },
   {
-    question: "Come si inizia un progetto?",
+    question: "In cosa si differenzia la tua analisi da uno scanner automatico?",
     answer:
-      "Con una chiamata di trenta minuti su Google Meet. Si sceglie giorno e orario sulla pagina Prenota: gli slot disponibili arrivano in tempo reale dal calendario.",
+      "Gli scanner automatici producono rumore, falsi positivi e non comprendono la logica di business. Io conduco test manuali per simulare un attaccante reale, fornendo per ogni falla un proof-of-concept riproducibile e il codice corretto per risolverla.",
   },
   {
-    question: "Cosa resta al cliente a fine lavoro?",
+    question: "Cosa viene rilasciato al termine di un security assessment?",
     answer:
-      "La piena ed esclusiva titolarità di tutto: dominio, hosting, grafica, testi e codice sorgente, senza vincoli contrattuali né canoni nascosti.",
+      "Un report esecutivo con matrice di rischio per il management e un report tecnico dettagliato per gli sviluppatori, completo di step di riproduzione, patch consigliate e una sessione di ri-test inclusa per validare le correzioni.",
   },
   {
-    question: "Dove lavora Matteo Di Liberto?",
+    question: "Come si avvia una collaborazione?",
     answer:
-      "A Varese, collaborando da remoto e di persona con professionisti, studi e attività in tutta Italia.",
+      "Con una chiamata di 30 minuti protetta da NDA per definire perimetro d'ingaggio, asset critici e vincoli operativi. Si prenota direttamente online scegliendo uno slot disponibile.",
   },
 ] as const;
 
@@ -60,12 +60,14 @@ export function personJsonLd() {
     },
     sameAs: [githubUrl],
     knowsAbout: [
-      "Siti web su misura",
-      "UI design",
-      "UX design",
-      "Sviluppo web frontend",
-      "Next.js",
-      "TypeScript",
+      "Cybersecurity",
+      "Penetration Testing",
+      "Offensive Security",
+      "DevSecOps",
+      "Cloud Security Hardening",
+      "Secure Code Review",
+      "AI & MLOps Security",
+      "Next.js & TypeScript Security",
     ],
   };
 }
@@ -90,7 +92,7 @@ export function serviceJsonLd() {
     url: siteUrl,
     image: absoluteUrl("/portrait.jpg"),
     description:
-      "Siti web e interfacce digitali su misura, dalla prima bozza alla pubblicazione: un solo interlocutore tra design e codice.",
+      "Servizi di Cybersecurity ad alta intensità tecnica: Penetration Testing, Audit del codice sorgente, DevSecOps e messa in sicurezza di infrastrutture cloud.",
     areaServed: { "@type": "Country", name: "Italia" },
     address: {
       "@type": "PostalAddress",
@@ -103,18 +105,27 @@ export function serviceJsonLd() {
         "@type": "Offer",
         itemOffered: {
           "@type": "Service",
-          name: "Sito web su misura",
+          name: "Penetration Testing Web & API",
           description:
-            "Design dell'interfaccia, testi e codice su misura, con dominio e hosting intestati al cliente.",
+            "Test d'intrusione manuale mirato a fallacie di logica di business, bypass di autenticazione e vulnerabilità OWASP.",
         },
       },
       {
         "@type": "Offer",
         itemOffered: {
           "@type": "Service",
-          name: "Web app su misura",
+          name: "Audit del Codice & DevSecOps",
           description:
-            "Applicazione web in Next.js e TypeScript, progettata e sviluppata per elevate prestazioni e sicurezza.",
+            "Revisione del sorgente, hardening delle dipendenze e integrazione di pipeline CI/CD con scansione e proof automatici.",
+        },
+      },
+      {
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: "Hardening Cloud & MLOps Security",
+          description:
+            "Isolamento ambienti containerizzati, policy zero-trust IAM e protezione da prompt injection su pipeline AI.",
         },
       },
     ],

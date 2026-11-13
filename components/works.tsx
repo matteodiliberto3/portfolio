@@ -6,8 +6,8 @@ import { Reveal } from "./reveal";
 export function Works({ projects }: { projects: Project[] }) {
   return (
     <section className="act works" id="lavori" aria-labelledby="works-title">
-      <Heading id="works-title" number="02" label="Lavori" hideEyebrow>
-        Progetti selezionati, / costruiti su misura.
+      <Heading id="works-title" number="02" label="Audit & Progetti" hideEyebrow>
+        Casi studio & report, / testati sul campo.
       </Heading>
 
       <ol className="work-list">
