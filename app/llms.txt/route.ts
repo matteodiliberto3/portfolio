@@ -24,6 +24,7 @@ Matteo Di Liberto progetta e sviluppa siti web su misura: design curato, codice 
 ## Pagine
 
 - [Home](${siteUrl}/): presentazione, lavori, metodo, contatto
+- [Cybersecurity](${siteUrl}/cybersecurity): offensive cybersecurity, penetration testing manuale e audit di sicurezza
 - [Domande](${siteUrl}/domande): le domande che arrivano prima di iniziare
 - [Prenota una chiamata](${siteUrl}/prenota): trenta minuti su Google Meet, orari letti dal calendario
 

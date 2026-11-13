@@ -88,8 +88,8 @@ export function SiteNav() {
           <a href="#metodo">Metodo</a>
         </li>
         <li>
-          <PageLink href="/laboratorio" direction="forward">
-            Laboratorio
+          <PageLink href="/cybersecurity" direction="forward">
+            Cybersecurity
           </PageLink>
         </li>
         <li>
