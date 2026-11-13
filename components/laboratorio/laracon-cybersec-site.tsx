@@ -1312,6 +1312,7 @@ function PixelDissolveBadge({
   bg = PALETTE.blue,
   fg = PALETTE.bg,
   triggerKey,
+  scrambleOnEnter = false,
   fontSize = "clamp(2rem, 5vw, 4.2rem)",
   padding = "0.08em 0.28em",
 }: {
@@ -1319,57 +1320,91 @@ function PixelDissolveBadge({
   bg?: string;
   fg?: string;
   triggerKey?: string | number;
+  scrambleOnEnter?: boolean;
   fontSize?: string;
   padding?: string;
 }) {
   const [dissolving, setDissolving] = useState(false);
+  const [displayText, setDisplayText] = useState(text);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
-    setDissolving(true);
-    const wrap = wrapRef.current;
-    const canvas = canvasRef.current;
-    if (!wrap || !canvas) {
-      const t = setTimeout(() => setDissolving(false), 320);
-      return () => clearTimeout(t);
-    }
+    let animInterval: NodeJS.Timeout;
+    let scrambleInterval: NodeJS.Timeout;
 
-    const w = Math.max(80, Math.round(wrap.offsetWidth));
-    const h = Math.max(36, Math.round(wrap.offsetHeight));
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const timer = setTimeout(() => {
+      setDissolving(true);
+      const wrap = wrapRef.current;
+      const canvas = canvasRef.current;
+      if (!wrap || !canvas) {
+        setDissolving(false);
+        setDisplayText(text);
+        return;
+      }
 
-    const cell = 5;
-    const cols = Math.ceil(w / cell);
-    const rows = Math.ceil(h / cell);
-    let step = 0;
-    const maxSteps = 9;
+      const w = Math.max(80, Math.round(wrap.offsetWidth));
+      const h = Math.max(36, Math.round(wrap.offsetHeight));
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const interval = setInterval(() => {
-      step++;
-      ctx.clearRect(0, 0, w, h);
-      const density = step <= 4 ? 0.35 + step * 0.14 : 1 - (step - 4) * 0.18;
-      for (let gy = 0; gy < rows; gy++) {
-        for (let gx = 0; gx < cols; gx++) {
-          const hash = ((gx * 73856093) ^ (gy * 19349663) ^ (step * 83492791)) & 255;
-          if (hash / 255 < density) {
-            ctx.fillStyle = hash % 5 === 0 ? PALETTE.ink : bg;
-            ctx.fillRect(gx * cell, gy * cell, cell - 1, cell - 1);
+      const cell = 5;
+      const cols = Math.ceil(w / cell);
+      const rows = Math.ceil(h / cell);
+      let step = 0;
+      const maxSteps = 11;
+
+      // Se scrambleOnEnter è attivo, decodifica rapida a caratteri glitch prima di stabilizzarsi
+      const glyphs = "01#$*&%<>[]_~!?";
+      let scrambleTick = 0;
+      if (scrambleOnEnter) {
+        scrambleInterval = setInterval(() => {
+          scrambleTick++;
+          if (scrambleTick >= 6) {
+            setDisplayText(text);
+            clearInterval(scrambleInterval);
+          } else {
+            const scrambled = text
+              .split("")
+              .map((c, i) => (i < Math.floor((scrambleTick / 6) * text.length) ? c : glyphs[Math.floor(Math.random() * glyphs.length)]))
+              .join("");
+            setDisplayText(scrambled);
+          }
+        }, 40);
+      } else {
+        setDisplayText(text);
+      }
+
+      animInterval = setInterval(() => {
+        step++;
+        ctx.clearRect(0, 0, w, h);
+        const density = step <= 4 ? 0.35 + step * 0.14 : Math.max(0, 1 - (step - 4) * 0.18);
+        for (let gy = 0; gy < rows; gy++) {
+          for (let gx = 0; gx < cols; gx++) {
+            const hash = ((gx * 73856093) ^ (gy * 19349663) ^ (step * 83492791)) & 255;
+            if (hash / 255 < density) {
+              ctx.fillStyle = hash % 5 === 0 ? PALETTE.ink : bg;
+              ctx.fillRect(gx * cell, gy * cell, cell - 1, cell - 1);
+            }
           }
         }
-      }
-      if (step >= maxSteps) {
-        clearInterval(interval);
-        ctx.clearRect(0, 0, w, h);
-        setDissolving(false);
-      }
-    }, 36);
+        if (step >= maxSteps) {
+          clearInterval(animInterval);
+          ctx.clearRect(0, 0, w, h);
+          setDissolving(false);
+          setDisplayText(text);
+        }
+      }, 34);
+    }, 0);
 
-    return () => clearInterval(interval);
-  }, [text, triggerKey, bg]);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(animInterval);
+      clearInterval(scrambleInterval);
+    };
+  }, [text, triggerKey, bg, scrambleOnEnter]);
 
   return (
     <span
@@ -1392,7 +1427,7 @@ function PixelDissolveBadge({
       }}
     >
       <span style={{ opacity: dissolving ? 0.35 : 1, transition: "opacity 80ms linear" }}>
-        {text}
+        {displayText}
       </span>
       <canvas
         ref={canvasRef}
@@ -1419,7 +1454,7 @@ function HeroEvolveTitle({
   replayKey: number;
   onReplay: () => void;
 }) {
-  const [phase, setPhase] = useState<"initial" | "rising" | "your" | "business">("initial");
+  const [phase, setPhase] = useState<"empty" | "animating" | "settled" | "rising" | "your" | "business">("empty");
   const [metrics, setMetrics] = useState({ riseY: 120, evolveW: 360 });
   const containerRef = useRef<HTMLHeadingElement | null>(null);
   const evolveRef = useRef<HTMLDivElement | null>(null);
@@ -1438,18 +1473,51 @@ function HeroEvolveTitle({
   }, [replayKey]);
 
   useEffect(() => {
-    setPhase("initial");
-    const t1 = setTimeout(() => setPhase("rising"), 1450);
-    const t2 = setTimeout(() => setPhase("your"), 2020);
-    const t3 = setTimeout(() => setPhase("business"), 2340);
+    let active = true;
+
+    // Passaggio 1: all'inizio il posto è completamente vuoto
+    const t0 = setTimeout(() => {
+      if (active) setPhase("empty");
+    }, 0);
+
+    // Passaggio 2: dopo tot secondi (~1.3s) parte l'animazione dither + scramble che porta a EVOLVE
+    const t1 = setTimeout(() => {
+      if (active) setPhase("animating");
+    }, 1300);
+
+    // Passaggio 3: EVOLVE è consolidato e resta visibile chiaramente in loco per ~1.2s
+    const t2 = setTimeout(() => {
+      if (active) setPhase("settled");
+    }, 1800);
+
+    // Passaggio 4: EVOLVE sale sopra THE THREATS
+    const t3 = setTimeout(() => {
+      if (active) setPhase("rising");
+    }, 3000);
+
+    // Passaggio 5: compare YOUR a destra
+    const t4 = setTimeout(() => {
+      if (active) setPhase("your");
+    }, 3650);
+
+    // Passaggio 6: compare BUSINESS sotto YOUR
+    const t5 = setTimeout(() => {
+      if (active) setPhase("business");
+    }, 4000);
+
     return () => {
+      active = false;
+      clearTimeout(t0);
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
+      clearTimeout(t4);
+      clearTimeout(t5);
     };
   }, [replayKey]);
 
-  const isRising = phase !== "initial";
+  const isEmpty = phase === "empty";
+  const isRising = phase === "rising" || phase === "your" || phase === "business";
   const showYour = phase === "your" || phase === "business";
   const showBusiness = phase === "business";
 
@@ -1487,19 +1555,22 @@ function HeroEvolveTitle({
         THE THREATS
       </span>
 
-      {/* Riga 2: EVOLVE (parte sotto, poi sale fino a y = 0 coprendo THE THREATS) */}
+      {/* Riga 2: EVOLVE (passaggi: prima vuoto, poi animazione che porta a EVOLVE, poi consolidamento e ascesa) */}
       <div
         ref={evolveRef}
         style={{
           position: "relative",
           zIndex: 2,
+          opacity: isEmpty ? 0 : 1,
+          pointerEvents: isEmpty ? "none" : "auto",
           transform: isRising ? `translateY(-${metrics.riseY}px)` : "translateY(0)",
-          transition: "transform 620ms cubic-bezier(0.22, 1, 0.36, 1)",
+          transition: "transform 620ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms ease",
         }}
       >
         <PixelDissolveBadge
           text="EVOLVE"
-          triggerKey={replayKey}
+          triggerKey={phase === "empty" ? undefined : `${replayKey}-${phase}`}
+          scrambleOnEnter={phase === "animating"}
           bg={PALETTE.blue}
           fg={PALETTE.ink}
           fontSize="clamp(3.3rem, 9.5vw, 9.2rem)"
