@@ -2438,48 +2438,93 @@ html[data-intro-hold] .portrait-mask img {
 }
 
 /* ---------- cybersec hero ASCII portrait layout ---------- */
+.cyber-hero-section {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - 54px);
+  padding: clamp(18px, 3vh, 36px) clamp(20px, 4vw, 48px) clamp(16px, 2.5vh, 24px);
+}
+
 .cyber-hero-grid {
+  flex: 1 0 auto;
   display: grid;
   grid-template-columns: 1fr;
+  grid-template-areas:
+    "copy"
+    "portrait"
+    "actions";
   align-items: center;
-  gap: clamp(24px, 4.5vh, 40px);
+  align-content: start;
+  gap: clamp(18px, 3.2vh, 32px);
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
 }
 
 .cyber-hero-copy {
+  grid-area: copy;
   --hero-base-size: clamp(1.95rem, 7.6vw, 5.1rem);
   --hero-evolve-size: clamp(2.15rem, 8.8vw, 6.1rem);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
-  gap: clamp(24px, 4vh, 44px);
+  gap: clamp(20px, 3.5vh, 40px);
   min-width: 0;
 }
 
 .cyber-hero-portrait {
-  width: min(100%, 380px);
+  grid-area: portrait;
+  width: min(100%, 440px);
   justify-self: center;
 }
 
+.cyber-hero-cta {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(10px, 1.5vh, 14px);
+  width: 100%;
+  min-width: 0;
+  margin-top: auto;
+  padding-top: clamp(8px, 1.8vh, 18px);
+}
+
 @media (min-width: 960px) {
+  .cyber-hero-section {
+    padding: clamp(14px, 2.2vh, 28px) clamp(20px, 4vw, 48px) clamp(14px, 2.2vh, 24px);
+  }
+
   .cyber-hero-grid {
-    grid-template-columns: minmax(0, 1.25fr) clamp(340px, 35vw, 480px);
-    gap: clamp(28px, 3.5vw, 56px);
+    grid-template-columns: minmax(0, 1.15fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "copy portrait"
+      "actions portrait";
+    gap: clamp(14px, 2.2vh, 24px) clamp(24px, 3vw, 48px);
     align-items: center;
+    align-content: stretch;
   }
 
   .cyber-hero-copy {
-    --hero-base-size: clamp(3.05rem, 5.15vw, 4.95rem);
-    --hero-evolve-size: clamp(3.55rem, 6.1vw, 5.85rem);
-    gap: clamp(28px, 4.5vh, 52px);
+    --hero-base-size: clamp(2.65rem, min(4.8vw, 7.4vh), 4.75rem);
+    --hero-evolve-size: clamp(3.15rem, min(5.75vw, 9vh), 5.6rem);
+    align-self: center;
+    gap: clamp(24px, 4vh, 48px);
   }
 
   .cyber-hero-portrait {
-    width: 100%;
-    max-width: 480px;
+    width: clamp(320px, min(40.5vw, 72svh), 560px);
+    max-width: 560px;
     justify-self: end;
+    align-self: center;
+  }
+
+  .cyber-hero-cta {
+    align-self: end;
+    margin-top: 0;
+    padding-top: 4px;
   }
 }

@@ -44,7 +44,7 @@ export default function HomePage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "11px", color: "#C8C7C9", letterSpacing: "0.08em" }}>
-            MATTEO DI LIBERTO // CYBERSECURITY
+            MATTEO DI LIBERTO
           </span>
         </div>
 

@@ -2377,13 +2377,10 @@ export function LaraconCybersecSite() {
        * =================================================================== */}
       <section
         id="hero"
+        className="cyber-hero-section"
         aria-label="Il cambiamento digitale"
         style={{
-          minHeight: "88vh",
           borderBottom: `1px solid ${PALETTE.slate}`,
-          display: "flex",
-          alignItems: "center",
-          padding: "clamp(24px, 4.5vw, 52px) clamp(20px, 4vw, 48px)",
         }}
       >
         <div className="cyber-hero-grid">
@@ -2392,76 +2389,6 @@ export function LaraconCybersecSite() {
               replayKey={replayNonce}
               onReplay={() => setReplayNonce((n) => n + 1)}
             />
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                gap: "14px",
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  maxWidth: "48ch",
-                  fontSize: "clamp(1.05rem, 1.4vw, 1.2rem)",
-                  lineHeight: 1.45,
-                  fontWeight: 700,
-                  color: "#F4F3FA",
-                }}
-              >
-                La tua azienda è rimasta al passo?
-              </p>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  justifyContent: "flex-start",
-                  gap: "12px",
-                }}
-              >
-                <Link
-                  href="/prenota"
-                  style={{
-                    padding: "14px 24px",
-                    minHeight: "48px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    background: PALETTE.red,
-                    color: "#ffffff",
-                    fontFamily: DISPLAY_FONT,
-                    fontSize: "1.25rem",
-                    letterSpacing: "0.02em",
-                    textTransform: "uppercase",
-                    textDecoration: "none",
-                    borderRadius: 0,
-                  }}
-                >
-                  Parliamo della tua azienda →
-                </Link>
-                <a
-                  href="#go-deeper"
-                  style={{
-                    padding: "14px 20px",
-                    minHeight: "48px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    background: "transparent",
-                    color: PALETTE.ink,
-                    border: `1px solid ${PALETTE.ink}`,
-                    fontFamily: MONO_FONT,
-                    fontSize: "12px",
-                    textTransform: "uppercase",
-                    textDecoration: "none",
-                    borderRadius: 0,
-                  }}
-                >
-                  Scopri cosa è cambiato ↓
-                </a>
-              </div>
-            </div>
           </div>
 
           <div className="cyber-hero-portrait">
@@ -2470,6 +2397,69 @@ export function LaraconCybersecSite() {
               alt="Ritratto di Matteo Di Liberto in stile ASCII art"
               bgColor={PALETTE.bg}
             />
+          </div>
+
+          <div className="cyber-hero-cta">
+            <p
+              style={{
+                margin: 0,
+                maxWidth: "62ch",
+                fontSize: "clamp(1.05rem, 1.4vw, 1.2rem)",
+                lineHeight: 1.45,
+                fontWeight: 700,
+                color: "#F4F3FA",
+              }}
+            >
+              La tua azienda è rimasta al passo?
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "flex-start",
+                gap: "12px",
+              }}
+            >
+              <Link
+                href="/prenota"
+                style={{
+                  padding: "14px 24px",
+                  minHeight: "48px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  background: PALETTE.red,
+                  color: "#ffffff",
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: "1.25rem",
+                  letterSpacing: "0.02em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  borderRadius: 0,
+                }}
+              >
+                Parliamo della tua azienda →
+              </Link>
+              <a
+                href="#go-deeper"
+                style={{
+                  padding: "14px 20px",
+                  minHeight: "48px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  background: "transparent",
+                  color: PALETTE.ink,
+                  border: `1px solid ${PALETTE.ink}`,
+                  fontFamily: MONO_FONT,
+                  fontSize: "12px",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  borderRadius: 0,
+                }}
+              >
+                Scopri cosa è cambiato ↓
+              </a>
+            </div>
           </div>
         </div>
       </section>

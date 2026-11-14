@@ -20,15 +20,14 @@ interface AsciiCell {
   gx: number;
   gy: number;
   glyph: string;
+  fontWeight: 500 | 700 | 800;
   color: string;
-  brightColor: string;
-  tileColor: string | null;
   revealOrder: number;
 }
 
-// Monospace density ramp ordered strictly by visual pixel coverage on #010101.
-const ASCII_RAMP = ".:;-~=+*x0%#8@";
-const SUIT_CIPHER_RAMP = ".:;-=+0135689#@";
+// Optical ink-density ASCII ramps ordered strictly for uniform cap-height rendering on #010101.
+const PURE_ASCII_RAMP = "..::--==++*7132546908$#B@";
+const SUIT_ASCII_RAMP = "..:;~=7132546908#";
 const CIPHER_GLYPHS = "01#<>*+=/:;[]~";
 const DEFAULT_ACCENTS = ["#3E3EE0", "#C50B3F", "#F4F3FA"] as const;
 
@@ -63,7 +62,7 @@ function estimatePerimeterWall(
 ): { leftBg: Float32Array; rightBg: Float32Array } {
   const rawLeft = new Float32Array(segH * 3);
   const rawRight = new Float32Array(segH * 3);
-  const marginCols = Math.max(5, Math.min(12, Math.floor(segW * 0.04)));
+  const marginCols = Math.max(6, Math.min(32, Math.floor(segW * 0.04)));
 
   for (let y = 0; y < segH; y++) {
     let lr = 0;
@@ -95,7 +94,7 @@ function estimatePerimeterWall(
 
   const leftBg = new Float32Array(segH * 3);
   const rightBg = new Float32Array(segH * 3);
-  const win = 8;
+  const win = Math.max(8, Math.round(segH * 0.017));
   for (let y = 0; y < segH; y++) {
     const y0 = Math.max(0, y - win);
     const y1 = Math.min(segH - 1, y + win);
@@ -178,7 +177,7 @@ function buildForegroundMask(
     if (prevIdx >= 0) {
       const pp4 = prevIdx * 4;
       const stepDiff = Math.hypot(r - data[pp4], g - data[pp4 + 1], b - data[pp4 + 2]);
-      if (stepDiff > 24) return false;
+      if (stepDiff > 21) return false;
     }
 
     return true;
@@ -251,11 +250,19 @@ function buildForegroundMask(
     alphaMask[i] = bgVisited[i] ? 0 : 1;
   }
 
-  // Feather perimeter transitions, strip 1px isolated dust, and pull interior dark hue onto rim halos.
-  for (let y = 1; y < segH - 1; y++) {
-    const ny = y / (segH - 1);
-    const bottomFade = 1 - smoothstep(0.91, 0.992, ny);
+  // Strip extreme outer ~0.4% JPEG border rows so no detached 1px bottom line can linger.
+  const borderRows = Math.max(2, Math.round(segH * 0.004));
+  const haloRadius = Math.max(2, Math.round(segW * 0.004));
+  for (let x = 0; x < segW; x++) {
+    alphaMask[x] = 0;
+    for (let b = 1; b <= borderRows; b++) {
+      alphaMask[(segH - b) * segW + x] = 0;
+    }
+  }
 
+  // Feather perimeter transitions without clipping the lower cuff buttons or bottom-right suit hem,
+  // preserve fine hair tips, strip isolated dust, and pull interior dark hue onto light wall-halo rims.
+  for (let y = 1; y < segH - borderRows; y++) {
     for (let x = 1; x < segW - 1; x++) {
       const idx = y * segW + x;
       if (bgVisited[idx]) {
@@ -269,7 +276,7 @@ function buildForegroundMask(
         bgVisited[idx - segW] +
         bgVisited[idx + segW];
 
-      if (bgNeighbors >= 3) {
+      if (bgNeighbors === 4) {
         alphaMask[idx] = 0;
         continue;
       }
@@ -282,22 +289,27 @@ function buildForegroundMask(
         const redGreen = r - g;
         const luma = 0.299 * r + 0.587 * g + 0.114 * b;
 
-        if (redGreen < 18 && luma > 102) {
+        if (bgNeighbors === 3 && luma >= 105) {
+          alphaMask[idx] = 0;
+          continue;
+        }
+
+        if (redGreen < 14 && luma > 112) {
           let sumR = 0;
           let sumG = 0;
           let sumB = 0;
           let count = 0;
-          for (let dy = -2; dy <= 2; dy++) {
+          for (let dy = -haloRadius; dy <= haloRadius; dy++) {
             const yy = y + dy;
             if (yy < 0 || yy >= segH) continue;
-            for (let dx = -2; dx <= 2; dx++) {
+            for (let dx = -haloRadius; dx <= haloRadius; dx++) {
               const xx = x + dx;
               if (xx < 0 || xx >= segW) continue;
               const ni = yy * segW + xx;
               if (bgVisited[ni]) continue;
               const np4 = ni * 4;
               const nluma = 0.299 * data[np4] + 0.587 * data[np4 + 1] + 0.114 * data[np4 + 2];
-              if (nluma < 118) {
+              if (nluma < 116) {
                 sumR += data[np4];
                 sumG += data[np4 + 1];
                 sumB += data[np4 + 2];
@@ -312,9 +324,9 @@ function buildForegroundMask(
           }
         }
 
-        alphaMask[idx] = Math.max(0.32, 1 - bgNeighbors * 0.25) * bottomFade;
+        alphaMask[idx] = Math.max(0.26, 1 - bgNeighbors * 0.23);
       } else {
-        alphaMask[idx] = bottomFade;
+        alphaMask[idx] = 1;
       }
     }
   }
@@ -328,8 +340,8 @@ function buildAsciiCells(
   rows: number,
   logicalSize: number
 ): AsciiCell[] {
-  const segW = 384;
-  const segH = 384;
+  const segW = 800;
+  const segH = 800;
 
   const offscreen = document.createElement("canvas");
   offscreen.width = segW;
@@ -398,18 +410,34 @@ function buildAsciiCells(
   const cellH = logicalSize / rows;
   const cells: AsciiCell[] = [];
 
+  const MAT_NONE = 0;
+  const MAT_SUIT = 1;
+  const MAT_SHIRT = 2;
+  const MAT_HAIR = 3;
+  const MAT_SKIN = 4;
+
+  const gridMat = new Uint8Array(cellCount);
+  const gridDetail = new Float32Array(cellCount);
+  const gridSobelX = new Float32Array(cellCount);
+  const gridSobelY = new Float32Array(cellCount);
+  const gridEdgeMag = new Float32Array(cellCount);
+
   for (let gy = 0; gy < rows; gy++) {
     const ny = gy / Math.max(1, rows - 1);
-    const bRow = BAYER_4X4[gy & 3];
-
     for (let gx = 0; gx < cols; gx++) {
       const idx = gy * cols + gx;
-      const alpha = gridA[idx];
-      if (alpha < 0.16) continue;
+      if (gridA[idx] < 0.16) continue;
 
+      const nx = gx / Math.max(1, cols - 1);
+      const r = gridR[idx];
+      const g = gridG[idx];
+      const b = gridB[idx];
       const lum = gridLum[idx];
+      const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+      const warmDiff = r - b;
+      const rgDiff = r - g;
+      const blueDiff = b - r;
 
-      // Gentle 3x3 detail pass keeps pupils, eyebrows, mouth, and finger gaps crisp without blotching skin.
       let lumSum = 0;
       let lumN = 0;
       for (let dy = -1; dy <= 1; dy++) {
@@ -426,99 +454,208 @@ function buildAsciiCells(
         }
       }
       const blurLum = lumN > 0 ? lumSum / lumN : lum;
-      const detail = lum - blurLum;
-      const sharpLum = clamp01(lum + detail * 0.42);
+      gridDetail[idx] = lum - blurLum;
 
+      // Classify garment and anatomical regions accurately.
+      const isShirt =
+        ny >= 0.365 &&
+        nx >= 0.36 &&
+        nx <= 0.76 &&
+        ((lum >= 0.44 && blueDiff < 20) || (lum >= 0.34 && blueDiff <= 6)) &&
+        rgDiff < 16 &&
+        warmDiff < 38 &&
+        chroma < 48;
+
+      if (isShirt) {
+        gridMat[idx] = MAT_SHIRT;
+        continue;
+      }
+
+      const isFaceOrHeadSkin =
+        ny < 0.39 && warmDiff >= 12 && (lum >= 0.14 || rgDiff >= 4);
+      const isNeckSkin =
+        ny >= 0.33 &&
+        ny <= 0.45 &&
+        nx >= 0.37 &&
+        nx <= 0.565 &&
+        warmDiff >= 13 &&
+        lum >= 0.12;
+      const isHandSkin = ny >= 0.58 && warmDiff >= 15 && rgDiff >= 5;
+
+      if (isFaceOrHeadSkin || isNeckSkin || isHandSkin) {
+        gridMat[idx] = MAT_SKIN;
+      } else if (ny < 0.415 && lum < 0.27) {
+        gridMat[idx] = MAT_HAIR;
+      } else if (ny >= 0.365 && lum < 0.44) {
+        gridMat[idx] = MAT_SUIT;
+      }
+    }
+  }
+
+  // Pass 2: 3x3 Sobel structural gradient strictly inside solid foreground (no outer wall rim artifacts).
+  for (let gy = 1; gy < rows - 1; gy++) {
+    for (let gx = 1; gx < cols - 1; gx++) {
+      const idx = gy * cols + gx;
+      if (gridA[idx] < 0.55) continue;
+
+      let interior = true;
+      for (let dy = -1; dy <= 1 && interior; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (gridA[(gy + dy) * cols + (gx + dx)] < 0.45) {
+            interior = false;
+            break;
+          }
+        }
+      }
+      if (!interior) continue;
+
+      const tl = gridLum[(gy - 1) * cols + (gx - 1)];
+      const tc = gridLum[(gy - 1) * cols + gx];
+      const tr = gridLum[(gy - 1) * cols + (gx + 1)];
+      const ml = gridLum[gy * cols + (gx - 1)];
+      const mr = gridLum[gy * cols + (gx + 1)];
+      const bl = gridLum[(gy + 1) * cols + (gx - 1)];
+      const bc = gridLum[(gy + 1) * cols + gx];
+      const br = gridLum[(gy + 1) * cols + (gx + 1)];
+
+      const sx = tr + 2 * mr + br - (tl + 2 * ml + bl);
+      const sy = bl + 2 * bc + br - (tl + 2 * tc + tr);
+      gridSobelX[idx] = sx;
+      gridSobelY[idx] = sy;
+      gridEdgeMag[idx] = Math.hypot(sx, sy);
+    }
+  }
+
+  for (let gy = 0; gy < rows; gy++) {
+    const ny = gy / Math.max(1, rows - 1);
+    const bRow = BAYER_4X4[gy & 3];
+
+    for (let gx = 0; gx < cols; gx++) {
+      const idx = gy * cols + gx;
+      const alpha = gridA[idx];
+      if (alpha < 0.16) continue;
+
+      const nx = gx / Math.max(1, cols - 1);
       const rawR = gridR[idx];
       const rawG = gridG[idx];
       const rawB = gridB[idx];
+      const lum = gridLum[idx];
+      const detail = gridDetail[idx];
+      const edgeMag = gridEdgeMag[idx];
+      const mat = gridMat[idx];
 
-      // Distinguish navy blazer weave from hair/eyebrows/pupils so dark facial features stay obsidian-sharp.
-      const isNavyFabric = rawB - rawR > 4 && rawB > 22 && lum < 0.36;
-      const isFineDarkCrease = detail < -0.045 && ny < 0.82 && !isNavyFabric;
       const cellHash = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
+      const distCenter = Math.hypot((nx - 0.5) * 1.15, ny - 0.42);
+      const revealOrder = clamp01(ny * 0.46 + distCenter * 0.36 + ((cellHash % 1000) / 1000) * 0.18);
 
-      let rOut: number;
-      let gOut: number;
-      let bOut: number;
-      let tileAlpha = 0;
-      let glyph: string;
-      let color: string;
-      let tileColor: string | null = null;
+      const isSuit = mat === MAT_SUIT;
+      const isHair = mat === MAT_HAIR;
+      const isShirt = mat === MAT_SHIRT;
+      const isSkin = mat === MAT_SKIN;
 
-      if (isNavyFabric) {
-        // Suit weave: subtle midnight-navy micro-tiles + crisp highlighted cipher digits along blazer folds.
-        const foldLum = clamp01(sharpLum * 1.65);
-        const tileR = clampByte(rawR * 0.85 + 6);
-        const tileG = clampByte(rawG * 0.92 + 11);
-        const tileB = clampByte(rawB * 1.15 + 24);
-        tileAlpha = alpha * (0.14 + foldLum * 0.42);
+      // Compensate black character spacing on dark #010101 canvas cleanly with zero binary cliffs.
+      let rOut = 0;
+      let gOut = 0;
+      let bOut = 0;
 
-        const gLift = 1.25 + (1 - foldLum) * 0.25;
-        rOut = clampByte(rawR * gLift + 16);
-        gOut = clampByte(rawG * gLift + 24);
-        bOut = clampByte(rawB * gLift + 48);
+      if (isSuit) {
+        const blueDiff = rawB - rawR;
+        const lapelMix = 1 - smoothstep(3, 12, blueDiff);
+        const foldGain = smoothstep(0.02, 0.28, lum);
+        const edgeBoost = Math.min(1, edgeMag * 1.1 + Math.abs(detail) * 10);
 
-        const bayerOffset = (bRow[gx & 3] / 16 - 0.5) * 0.045;
-        const suitTone = clamp01(foldLum * 0.78 + 0.14 + bayerOffset);
-        const baseIdx = Math.floor(suitTone * (SUIT_CIPHER_RAMP.length - 0.01));
-        const rampIdx = Math.min(
-          SUIT_CIPHER_RAMP.length - 1,
-          Math.max(0, baseIdx + (cellHash % 3) - 1)
-        );
-        glyph = SUIT_CIPHER_RAMP[rampIdx];
-        tileColor = `rgba(${tileR}, ${tileG}, ${tileB}, ${tileAlpha.toFixed(2)})`;
-        color =
-          alpha >= 0.98
-            ? `rgb(${rOut}, ${gOut}, ${bOut})`
-            : `rgba(${rOut}, ${gOut}, ${bOut}, ${alpha.toFixed(2)})`;
+        const blueR = Math.max(26, clampByte(rawR * 1.18 + 14 + foldGain * 14 + edgeBoost * 16));
+        const blueG = Math.max(46, clampByte(rawG * 1.28 + 26 + foldGain * 22 + edgeBoost * 22));
+        const blueB = Math.max(96, clampByte(rawB * 1.44 + 54 + foldGain * 34 + edgeBoost * 34));
+
+        const lapelBase = lum * 255;
+        const lapelR = Math.max(38, clampByte(lapelBase * 1.18 + 22 + edgeBoost * 18));
+        const lapelG = Math.max(46, clampByte(lapelBase * 1.24 + 28 + edgeBoost * 20));
+        const lapelB = Math.max(68, clampByte(lapelBase * 1.38 + 44 + edgeBoost * 26));
+
+        rOut = clampByte(blueR + (lapelR - blueR) * lapelMix + detail * 16);
+        gOut = clampByte(blueG + (lapelG - blueG) * lapelMix + detail * 18);
+        bOut = clampByte(blueB + (lapelB - blueB) * lapelMix + detail * 22);
       } else {
-        // Skin, sclera, shirt, hands, and hair: preserve deep black creases while lifting daylight photographic luminance via matrix micro-tiles.
-        const curveExp = isFineDarkCrease || lum < 0.14 ? 1.06 : 0.84;
-        const liftChannel = (channel: number) =>
-          clampByte(Math.pow(clamp01(channel / 255), curveExp) * 255);
+        const shadowBlend = 1 - smoothstep(0.04, 0.26, lum);
+        const exp = isShirt ? 0.82 : isHair ? 0.86 + shadowBlend * 0.08 : 0.82 + shadowBlend * 0.16;
+        const gain = isShirt ? 1.16 : isHair ? 1.24 : 1.17;
+        const hairLift = isHair ? (1 - smoothstep(0.0, 0.22, lum)) * 22 : 0;
+        const detailShift = detail * (isShirt ? 44 : isHair ? 34 : 36);
 
-        rOut = liftChannel(rawR);
-        gOut = liftChannel(rawG);
-        bOut = liftChannel(rawB);
+        const liftCh = (ch: number) =>
+          clampByte(Math.pow(clamp01(ch / 255), exp) * 255 * gain + detailShift + hairLift);
 
-        const litMix = smoothstep(0.16, 0.72, sharpLum);
-        tileAlpha = isFineDarkCrease ? alpha * 0.12 : alpha * litMix * 0.9;
-        if (tileAlpha > 0.04) {
-          tileColor = `rgba(${rOut}, ${gOut}, ${bOut}, ${tileAlpha.toFixed(2)})`;
-        }
+        rOut = liftCh(rawR);
+        gOut = liftCh(rawG);
+        bOut = liftCh(rawB);
 
-        const bayerOffset = (bRow[gx & 3] / 16 - 0.5) * 0.025;
-        const minFloor = isFineDarkCrease || lum < 0.14 ? 0.01 : 0.08;
-        const tone = clamp01(Math.max(minFloor, sharpLum) + bayerOffset);
-        const rampIdx = Math.min(
-          ASCII_RAMP.length - 1,
-          Math.max(0, Math.floor(tone * (ASCII_RAMP.length - 0.01)))
-        );
-        glyph = ASCII_RAMP[rampIdx];
-
-        if (tileAlpha > 0.52) {
-          // Stamp delicate monospace ASCII texture inside bright skin/shirt micro-tiles without lowering perceived lightness.
-          const gScale = sharpLum > 0.8 ? 0.92 : 0.76;
-          const gAlpha = alpha * (sharpLum > 0.8 ? 0.22 : 0.36);
-          color = `rgba(${clampByte(rOut * gScale)}, ${clampByte(gOut * gScale)}, ${clampByte(bOut * gScale)}, ${gAlpha.toFixed(2)})`;
-        } else {
-          color =
-            alpha >= 0.98
-              ? `rgb(${rOut}, ${gOut}, ${bOut})`
-              : `rgba(${rOut}, ${gOut}, ${bOut}, ${alpha.toFixed(2)})`;
+        // Keep dark eyes/pupils and eyebrows grounded with subtle charcoal presence.
+        if (isSkin && lum < 0.11 && ny >= 0.17 && ny <= 0.275) {
+          rOut = Math.max(20, rOut);
+          gOut = Math.max(15, gOut);
+          bOut = Math.max(14, bOut);
         }
       }
 
-      const brightColor =
+      const ditherLum = clamp01(lum + (bRow[gx & 3] / 16 - 0.5) * 0.065);
+      const sharpLum = clamp01(ditherLum + detail * (isShirt ? 1.85 : isHair ? 1.35 : 1.45));
+
+      // Determine pure ASCII character: crisp directional strokes strictly on strong suit seams/pocket lines,
+      // and micro-sharpened full-height optical density glyphs everywhere else so skin & shirt stay seamless.
+      let glyph: string;
+      if (isSuit && edgeMag >= 0.78 && lum >= 0.06) {
+        const sx = gridSobelX[idx];
+        const sy = gridSobelY[idx];
+        const absX = Math.abs(sx);
+        const absY = Math.abs(sy);
+        if (absY > absX * 1.85) {
+          glyph = edgeMag > 1.05 ? "=" : "-";
+        } else if (absX > absY * 1.85) {
+          glyph = "|";
+        } else if (sx * sy > 0) {
+          glyph = "/";
+        } else {
+          glyph = "\\";
+        }
+      } else if (isSuit) {
+        const sTone = clamp01(ditherLum * 2.55 + Math.abs(detail) * 1.9);
+        const sIdx = Math.min(
+          SUIT_ASCII_RAMP.length - 1,
+          Math.max(0, Math.floor(sTone * (SUIT_ASCII_RAMP.length - 0.01)))
+        );
+        glyph = SUIT_ASCII_RAMP[sIdx];
+      } else if (isSkin && lum < 0.11 && ny >= 0.17 && ny <= 0.275) {
+        // Dense dark glyph for pupils/iris and brows so eyes read solidly next to sclera.
+        glyph = cellHash % 2 === 0 ? "#" : "8";
+      } else {
+        const tone = isShirt
+          ? clamp01(0.32 + sharpLum * 0.68)
+          : isHair
+            ? clamp01(0.16 + ditherLum * 2.05 + detail * 1.35)
+            : clamp01(Math.pow(sharpLum, 0.84) * 0.94 + 0.06);
+        const pIdx = Math.min(
+          PURE_ASCII_RAMP.length - 1,
+          Math.max(0, Math.floor(tone * (PURE_ASCII_RAMP.length - 0.01)))
+        );
+        glyph = PURE_ASCII_RAMP[pIdx];
+      }
+
+      let fontWeight: 500 | 700 | 800;
+      if (isSuit) {
+        fontWeight = lum > 0.20 || edgeMag >= 0.74 ? 700 : 500;
+      } else if (lum >= 0.52) {
+        fontWeight = 800;
+      } else if (lum >= 0.14) {
+        fontWeight = 700;
+      } else {
+        fontWeight = 500;
+      }
+
+      const color =
         alpha >= 0.98
           ? `rgb(${rOut}, ${gOut}, ${bOut})`
           : `rgba(${rOut}, ${gOut}, ${bOut}, ${alpha.toFixed(2)})`;
-
-      const nx = gx / Math.max(1, cols - 1);
-      const distCenter = Math.hypot((nx - 0.5) * 1.15, ny - 0.42);
-      const hash = cellHash % 1000;
-      const revealOrder = clamp01(ny * 0.46 + distCenter * 0.36 + (hash / 1000) * 0.18);
 
       cells.push({
         cx: (gx + 0.5) * cellW,
@@ -526,9 +663,8 @@ function buildAsciiCells(
         gx,
         gy,
         glyph,
+        fontWeight,
         color,
-        brightColor,
-        tileColor,
         revealOrder,
       });
     }
@@ -538,22 +674,21 @@ function buildAsciiCells(
 }
 
 /**
- * Pixel-sampled colored ASCII portrait renderer with studio-wall segmentation,
- * HiDPI crisp monospace rendering, entrance cipher reveal, and hover decode ripple.
+ * 100% pure-ASCII portrait renderer with studio-wall segmentation,
+ * Sobel directional contours, ink-density luminance compensation, and cipher reveal.
  */
 export function AsciiPortraitCanvas({
   src,
   alt,
-  logicalSize = 576,
-  cols = 192,
-  rows = 168,
+  logicalSize = 960,
+  cols = 188,
+  rows = 162,
   bgColor = "#010101",
   accentColors = DEFAULT_ACCENTS,
   className = "",
   style,
 }: AsciiPortraitCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const pointerRef = useRef({ x: -9999, y: -9999, lastMoveTs: 0 });
   const isVisibleRef = useRef(true);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
@@ -574,18 +709,14 @@ export function AsciiPortraitCanvas({
     canvas.width = backingSize;
     canvas.height = backingSize;
 
-    const cellW = logicalSize / cols;
     const cellH = logicalSize / rows;
-    const tileW = Number((cellW * 0.78).toFixed(2));
-    const tileH = Number((cellH * 0.78).toFixed(2));
-    const fontPx = Number((cellH * 1.18).toFixed(2));
+    const fontPx = Number((cellH * 1.35).toFixed(2));
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reducedMotion = motionQuery.matches;
 
     let animStart = 0;
+    let revealDone = false;
     const revealDurationMs = 900;
-    const hoverRadius = logicalSize * 0.075;
-    const hoverDecayMs = 650;
 
     const buildSettledBuffer = () => {
       if (cells.length === 0) return;
@@ -603,18 +734,19 @@ export function AsciiPortraitCanvas({
         bCtx.fillRect(0, 0, logicalSize, logicalSize);
       }
 
-      bCtx.font = `600 ${fontPx}px ${resolvedFont}`;
       bCtx.textAlign = "center";
       bCtx.textBaseline = "middle";
 
-      for (let i = 0; i < cells.length; i++) {
-        const cell = cells[i];
-        if (cell.tileColor) {
-          bCtx.fillStyle = cell.tileColor;
-          bCtx.fillRect(cell.cx - tileW * 0.5, cell.cy - tileH * 0.5, tileW, tileH);
+      const weights: readonly (500 | 700 | 800)[] = [500, 700, 800];
+      for (let w = 0; w < weights.length; w++) {
+        const targetWeight = weights[w];
+        bCtx.font = `${targetWeight} ${fontPx}px ${resolvedFont}`;
+        for (let i = 0; i < cells.length; i++) {
+          const cell = cells[i];
+          if (cell.fontWeight !== targetWeight) continue;
+          bCtx.fillStyle = cell.color;
+          bCtx.fillText(cell.glyph, cell.cx, cell.cy);
         }
-        bCtx.fillStyle = cell.color;
-        bCtx.fillText(cell.glyph, cell.cx, cell.cy);
       }
 
       settledBuffer = buf;
@@ -632,7 +764,7 @@ export function AsciiPortraitCanvas({
 
     const drawAnimatedFrame = (now: number) => {
       if (cancelled || cells.length === 0) return;
-      if (reducedMotion) {
+      if (reducedMotion || revealDone) {
         drawSettled();
         rafId = 0;
         return;
@@ -642,86 +774,63 @@ export function AsciiPortraitCanvas({
       const elapsed = now - animStart;
       const revealProgress = clamp01(elapsed / revealDurationMs);
 
-      const ptr = pointerRef.current;
-      const timeSinceMove = now - ptr.lastMoveTs;
-      const hoverActive = ptr.lastMoveTs > 0 && timeSinceMove < hoverDecayMs;
-      const hoverStrength = hoverActive ? clamp01(1 - timeSinceMove / hoverDecayMs) : 0;
+      if (revealProgress >= 1) {
+        revealDone = true;
+        rafId = 0;
+        drawSettled();
+        return;
+      }
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.font = `600 ${fontPx}px ${resolvedFont}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const tickBucket = Math.floor(now / 52);
 
-      // Fast path after entrance reveal: copy settled GPU buffer and redraw only cells inside pointer ripple.
-      if (revealProgress >= 1 && settledBuffer) {
+      if (bgColor === "transparent") {
         ctx.clearRect(0, 0, logicalSize, logicalSize);
-        ctx.drawImage(settledBuffer, 0, 0, logicalSize, logicalSize);
-
-        if (hoverStrength > 0.02) {
-          const effectiveRadius = hoverRadius * (0.45 + 0.55 * hoverStrength);
-          for (let i = 0; i < cells.length; i++) {
-            const cell = cells[i];
-            const dist = Math.hypot(cell.cx - ptr.x, cell.cy - ptr.y);
-            if (dist >= effectiveRadius) continue;
-
-            const pHash = ((cell.gx * 53 + cell.gy * 127 + tickBucket * 17) >>> 0);
-            if ((pHash % 100) / 100 < hoverStrength * (1 - dist / effectiveRadius) * 0.9) {
-              if (bgColor === "transparent") {
-                ctx.clearRect(cell.cx - cellW * 0.5, cell.cy - cellH * 0.5, cellW, cellH);
-              } else {
-                ctx.fillStyle = bgColor;
-                ctx.fillRect(cell.cx - cellW * 0.5, cell.cy - cellH * 0.5, cellW, cellH);
-              }
-              const scrambleChar = CIPHER_GLYPHS[pHash % CIPHER_GLYPHS.length];
-              ctx.fillStyle = pHash % 3 === 0 ? accentColors[0] : cell.brightColor;
-              ctx.fillText(scrambleChar, cell.cx, cell.cy);
-            }
-          }
-        }
       } else {
-        if (bgColor === "transparent") {
-          ctx.clearRect(0, 0, logicalSize, logicalSize);
-        } else {
-          ctx.fillStyle = bgColor;
-          ctx.fillRect(0, 0, logicalSize, logicalSize);
-        }
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, logicalSize, logicalSize);
+      }
 
-        for (let i = 0; i < cells.length; i++) {
-          const cell = cells[i];
-          const gate = cell.revealOrder * 0.72;
-          if (revealProgress < gate) continue;
+      let currentWeight = 700;
+      ctx.font = `700 ${fontPx}px ${resolvedFont}`;
 
-          const localProgress = clamp01((revealProgress - gate) / 0.28);
-          if (localProgress < 0.82) {
-            const cHash = ((cell.gx * 97 + cell.gy * 193 + tickBucket * 31) >>> 0);
-            const scrambleChar = CIPHER_GLYPHS[cHash % CIPHER_GLYPHS.length];
-            ctx.fillStyle = accentColors[cHash % accentColors.length];
-            ctx.fillText(scrambleChar, cell.cx, cell.cy);
-          } else {
-            if (cell.tileColor) {
-              ctx.fillStyle = cell.tileColor;
-              ctx.fillRect(cell.cx - tileW * 0.5, cell.cy - tileH * 0.5, tileW, tileH);
-            }
-            ctx.fillStyle = cell.color;
-            ctx.fillText(cell.glyph, cell.cx, cell.cy);
+      for (let i = 0; i < cells.length; i++) {
+        const cell = cells[i];
+        const gate = cell.revealOrder * 0.72;
+        if (revealProgress < gate) continue;
+
+        const localProgress = clamp01((revealProgress - gate) / 0.28);
+        if (localProgress < 0.82) {
+          if (currentWeight !== 700) {
+            currentWeight = 700;
+            ctx.font = `700 ${fontPx}px ${resolvedFont}`;
           }
+          const cHash = ((cell.gx * 97 + cell.gy * 193 + tickBucket * 31) >>> 0);
+          const scrambleChar = CIPHER_GLYPHS[cHash % CIPHER_GLYPHS.length];
+          ctx.fillStyle = accentColors[cHash % accentColors.length];
+          ctx.fillText(scrambleChar, cell.cx, cell.cy);
+        } else {
+          if (currentWeight !== cell.fontWeight) {
+            currentWeight = cell.fontWeight;
+            ctx.font = `${currentWeight} ${fontPx}px ${resolvedFont}`;
+          }
+          ctx.fillStyle = cell.color;
+          ctx.fillText(cell.glyph, cell.cx, cell.cy);
         }
       }
 
-      if ((revealProgress < 1 || hoverActive) && isVisibleRef.current) {
+      if (isVisibleRef.current) {
         rafId = requestAnimationFrame(drawAnimatedFrame);
       } else {
         rafId = 0;
-        if (revealProgress >= 1 && !hoverActive) {
-          drawSettled();
-        }
       }
     };
 
     const startOrWakeLoop = () => {
       if (cancelled || cells.length === 0) return;
-      if (reducedMotion) {
+      if (reducedMotion || revealDone) {
         drawSettled();
         return;
       }
@@ -795,34 +904,15 @@ export function AsciiPortraitCanvas({
     );
     observer.observe(canvas);
 
-    const handlePointerWake = () => {
-      if (!reducedMotion && cells.length > 0 && !rafId && isVisibleRef.current) {
-        rafId = requestAnimationFrame(drawAnimatedFrame);
-      }
-    };
-    canvas.addEventListener("pointermove", handlePointerWake, { passive: true });
-
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafId);
       observer.disconnect();
-      canvas.removeEventListener("pointermove", handlePointerWake);
       if (typeof motionQuery.removeEventListener === "function") {
         motionQuery.removeEventListener("change", handleMotionChange);
       }
     };
   }, [src, logicalSize, cols, rows, bgColor, accentColors]);
-
-  const updatePointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.pointerType !== "mouse") return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    pointerRef.current.x = ((e.clientX - rect.left) / rect.width) * logicalSize;
-    pointerRef.current.y = ((e.clientY - rect.top) / rect.height) * logicalSize;
-    pointerRef.current.lastMoveTs = performance.now();
-  };
 
   if (status === "error") {
     return null;
@@ -834,7 +924,6 @@ export function AsciiPortraitCanvas({
       role="img"
       aria-label={alt}
       className={className}
-      onPointerMove={updatePointer}
       style={{
         display: "block",
         width: "100%",
