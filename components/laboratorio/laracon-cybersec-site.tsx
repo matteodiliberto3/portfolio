@@ -48,6 +48,7 @@ export type DitherSceneKind =
   | "dome"
   | "torus"
   | "star"
+  | "mutant"
   | "hollowCube"
   | "structureRetool"
   | "structureAdapt"
@@ -451,6 +452,172 @@ function drawEvolvingStructure3D(
       const lockedDist = 0.39 + Math.sin(t * 1.4) * 0.012;
       const pos: Vec3 = [p.dir[0] * lockedDist, p.dir[1] * lockedDist, p.dir[2] * lockedDist];
       drawFilledBox3D(buf, zBuf, cols, rows, pos, p.half, rx, ry, s, cx, cy, 10);
+    }
+  }
+}
+
+function evalMutantShape(
+  shapeIdx: number,
+  px: number,
+  py: number,
+  pz: number,
+  t: number,
+  beat: number,
+  morphSurge: number
+): number {
+  const r = Math.hypot(px, py, pz);
+  const invR = r > 1e-4 ? 1 / r : 0;
+  const ux = px * invR;
+  const uy = py * invR;
+  const uz = pz * invR;
+  const ripAmp = 0.03 + 0.025 * beat + 0.028 * morphSurge;
+  const rip =
+    ripAmp *
+    (Math.sin(ux * 6.5 + t * 3.1) * Math.cos(uy * 6.5 - t * 2.4) +
+      0.6 * Math.sin(uz * 7.2 + t * 2.7));
+
+  if (shapeIdx === 0) {
+    // Forma 0: stella mutante a 4 lobi organici
+    const ux2 = ux * ux;
+    const uy2 = uy * uy;
+    const uz2 = uz * uz;
+    const starTerm = ux2 * ux2 - 6 * ux2 * uy2 + uy2 * uy2;
+    return r - (0.62 + 0.28 * starTerm - 0.14 * uz2 + rip);
+  }
+  if (shapeIdx === 1) {
+    // Forma 1: organismo tentacolare / nucleo virale a lobi mobili
+    const lobe =
+      Math.sin(ux * 5.2 + t * 2.0) *
+      Math.sin(uy * 5.2 - t * 1.7) *
+      Math.sin(uz * 5.2 + t * 1.4);
+    const tri = ux * uy * uz * 2.6;
+    return r - (0.64 + 0.26 * lobe + 0.12 * tri + rip * 1.2);
+  }
+  if (shapeIdx === 2) {
+    // Forma 2: anello bio-mutante ondulato e pulsante
+    const rxy = Math.hypot(px, py);
+    const ang = Math.atan2(py, px);
+    const ringR = 0.56 + 0.075 * Math.sin(ang * 3 - t * 2.6);
+    const tubeR =
+      0.22 + 0.048 * Math.cos(ang * 4 + t * 3.2) + 0.025 * Math.sin(pz * 8 + t * 2.5);
+    return Math.hypot(rxy - ringR, pz) - tubeR;
+  }
+  // Forma 3: cristallo mutante a 6 punte assiali
+  const ux2 = ux * ux;
+  const uy2 = uy * uy;
+  const uz2 = uz * uz;
+  const axes4 = ux2 * ux2 + uy2 * uy2 + uz2 * uz2;
+  return r - (0.52 + 0.42 * (axes4 * axes4 - 0.34) + rip);
+}
+
+function drawMutantMorph3D(
+  buf: Float32Array,
+  cols: number,
+  rows: number,
+  t: number,
+  mx: number,
+  my: number,
+  baseScale: number,
+  cx: number,
+  cy: number
+) {
+  // Pulsazione cardiaca ritmica (lub-dub) + respiro continuo
+  const beatPhase = (t * 0.92) % 1;
+  const lub = Math.exp(-Math.pow((beatPhase - 0.14) / 0.075, 2));
+  const dub = 0.62 * Math.exp(-Math.pow((beatPhase - 0.3) / 0.085, 2));
+  const beat = lub + dub;
+  const pulse = 0.94 + 0.13 * beat + 0.035 * Math.sin(t * 2.1);
+
+  // Ogni ~2.6s mantiene una forma e poi muta fluidamente nella successiva
+  const stageDuration = 2.6;
+  const totalCycle = (t / stageDuration) % 4;
+  const idxA = Math.floor(totalCycle) % 4;
+  const idxB = (idxA + 1) % 4;
+  const local = totalCycle - Math.floor(totalCycle);
+  const rawBlend = Math.max(0, Math.min(1, (local - 0.62) / 0.38));
+  const blend = rawBlend * rawBlend * (3 - 2 * rawBlend);
+  const morphSurge = Math.sin(blend * Math.PI);
+
+  const evalSDF = (px: number, py: number, pz: number) => {
+    const invP = 1 / pulse;
+    const sx = px * invP;
+    const sy = py * invP;
+    const sz = pz * invP;
+    const dA = evalMutantShape(idxA, sx, sy, sz, t, beat, morphSurge);
+    if (blend <= 0.001) return dA * pulse;
+    const dB = evalMutantShape(idxB, sx, sy, sz, t, beat, morphSurge);
+    return ((1 - blend) * dA + blend * dB) * pulse;
+  };
+
+  const rx = 0.38 + my * 0.38 + Math.sin(t * 0.55) * 0.2;
+  const ry = t * 0.65 + mx * 0.55;
+  const cosX = Math.cos(rx);
+  const sinX = Math.sin(rx);
+  const cosY = Math.cos(ry);
+  const sinY = Math.sin(ry);
+
+  const camZ = 4.5;
+  // Inversa di rotatePoint: Rx(-rx) poi Ry(-ry)
+  const roY1 = camZ * sinX;
+  const roZ1 = camZ * cosX;
+  const rox = roZ1 * sinY;
+  const roy = roY1;
+  const roz = roZ1 * cosY;
+
+  const scale = baseScale * 0.96;
+  const boundR2 = 1.48 * 1.48;
+  const eps = 0.015;
+
+  for (let gy = 0; gy < rows; gy++) {
+    const py = (gy - cy) / scale;
+    const py2 = py * py;
+    if (py2 > boundR2) continue;
+
+    for (let gx = 0; gx < cols; gx++) {
+      const px = (gx - cx) / scale;
+      if (px * px + py2 > boundR2) continue;
+
+      const rLen = Math.hypot(px, py, -camZ);
+      const wdx = px / rLen;
+      const wdy = py / rLen;
+      const wdz = -camZ / rLen;
+
+      const dY1 = wdy * cosX + wdz * sinX;
+      const dZ1 = -wdy * sinX + wdz * cosX;
+      const rdx = wdx * cosY + dZ1 * sinY;
+      const rdy = dY1;
+      const rdz = -wdx * sinY + dZ1 * cosY;
+
+      let rayT = 3.15;
+      let hit = false;
+      let hx = 0;
+      let hy = 0;
+      let hz = 0;
+
+      for (let iter = 0; iter < 32; iter++) {
+        hx = rox + rdx * rayT;
+        hy = roy + rdy * rayT;
+        hz = roz + rdz * rayT;
+        const d = evalSDF(hx, hy, hz);
+        if (d < 0.012) {
+          hit = true;
+          break;
+        }
+        rayT += d * 0.62;
+        if (rayT > 5.85) break;
+      }
+
+      if (!hit) continue;
+
+      const nx = evalSDF(hx + eps, hy, hz) - evalSDF(hx - eps, hy, hz);
+      const ny = evalSDF(hx, hy + eps, hz) - evalSDF(hx, hy - eps, hz);
+      const nz = evalSDF(hx, hy, hz + eps) - evalSDF(hx, hy, hz - eps);
+      const nLen = Math.hypot(nx, ny, nz) || 1;
+      const rn = rotatePoint(nx / nLen, ny / nLen, nz / nLen, rx, ry);
+
+      const rim = Math.pow(Math.max(0, 1 - Math.abs(rn[2])), 1.8) * 0.18;
+      const lum = 0.34 + rn[0] * 0.34 - rn[1] * 0.36 + rn[2] * 0.44 + beat * 0.12 - rim;
+      buf[gy * cols + gx] = Math.max(0.16, Math.min(1, lum));
     }
   }
 }
@@ -1210,6 +1377,7 @@ function renderSceneToBuffer(
     for (const [c, h] of beams) {
       drawFilledBox3D(buf, zBuf, cols, rows, c, h, rx, ry, s, cx, cy, 8);
     }
+    return;
   }
 
   if (kind === "structureRetool") {
@@ -1224,6 +1392,11 @@ function renderSceneToBuffer(
 
   if (kind === "structureEvolve") {
     drawEvolvingStructure3D(2, buf, zBuf, cols, rows, t, mx, my, baseScale, cx, cy);
+    return;
+  }
+
+  if (kind === "mutant") {
+    drawMutantMorph3D(buf, cols, rows, t, mx, my, baseScale, cx, cy);
   }
 }
 
@@ -1432,34 +1605,58 @@ export function PixelDitherCanvas({
  * MICRO-ANIMAZIONI TIPOGRAFICHE FEDELI AL REEL
  * ========================================================================== */
 
-/** 1. PixelDissolveBadge: dissolvenza pixel 5px blu/bianco originale (senza rosso né badge) */
+/** 1. PixelDissolveBadge: dissolvenza pixel 5px in entrata e uscita */
 function PixelDissolveBadge({
   text,
   bg = PALETTE.blue,
   fg = PALETTE.bg,
   triggerKey,
   scrambleOnEnter = false,
+  dissolveMode = "enter",
+  animateOnMount = true,
   fontSize = "clamp(2rem, 5vw, 4.2rem)",
   padding = "0.08em 0.28em",
+  lineHeight = 0.92,
+  whiteSpace,
 }: {
   text: string;
   bg?: string;
   fg?: string;
   triggerKey?: string | number;
   scrambleOnEnter?: boolean;
+  dissolveMode?: "enter" | "exit";
+  animateOnMount?: boolean;
   fontSize?: string;
   padding?: string;
+  lineHeight?: number;
+  whiteSpace?: React.CSSProperties["whiteSpace"];
 }) {
   const [dissolving, setDissolving] = useState(false);
+  const [exited, setExited] = useState(false);
   const [displayText, setDisplayText] = useState(text);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
-    let animInterval: NodeJS.Timeout;
-    let scrambleInterval: NodeJS.Timeout;
+    let animInterval: ReturnType<typeof setInterval> | undefined;
+    let scrambleInterval: ReturnType<typeof setInterval> | undefined;
+
+    if (!animateOnMount) {
+      const resetTimer = setTimeout(() => {
+        setDissolving(false);
+        setExited(false);
+        setDisplayText(text);
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext("2d");
+          ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }, 0);
+      return () => clearTimeout(resetTimer);
+    }
 
     const timer = setTimeout(() => {
+      setExited(false);
       setDissolving(true);
       const wrap = wrapRef.current;
       const canvas = canvasRef.current;
@@ -1481,23 +1678,42 @@ function PixelDissolveBadge({
       const rows = Math.ceil(h / cell);
       let step = 0;
       const maxSteps = 11;
+      const isExit = dissolveMode === "exit";
 
-      // Se scrambleOnEnter è attivo, decodifica rapida a caratteri glitch prima di stabilizzarsi
+      // Decodifica rapida in entrata o corruzione in uscita con caratteri glitch
       const glyphs = "01#$*&%<>[]_~!?";
       const scrambleString = (locked: number) =>
         text
           .split("")
           .map((c, i) => (i < locked ? c : glyphs[Math.floor(Math.random() * glyphs.length)]))
           .join("");
-      let scrambleTick = 0;
-      const totalScrambleTicks = 8;
-      if (scrambleOnEnter) {
+
+      if (isExit) {
+        let scrambleTick = 0;
+        const totalScrambleTicks = 5;
+        setDisplayText(text);
+        scrambleInterval = setInterval(() => {
+          scrambleTick++;
+          if (scrambleTick >= totalScrambleTicks) {
+            setDisplayText(scrambleString(0));
+            if (scrambleInterval) clearInterval(scrambleInterval);
+          } else {
+            const locked = Math.max(
+              0,
+              text.length - Math.ceil((scrambleTick / totalScrambleTicks) * text.length)
+            );
+            setDisplayText(scrambleString(locked));
+          }
+        }, 34);
+      } else if (scrambleOnEnter) {
+        let scrambleTick = 0;
+        const totalScrambleTicks = 8;
         setDisplayText(scrambleString(0));
         scrambleInterval = setInterval(() => {
           scrambleTick++;
           if (scrambleTick >= totalScrambleTicks) {
             setDisplayText(text);
-            clearInterval(scrambleInterval);
+            if (scrambleInterval) clearInterval(scrambleInterval);
           } else {
             const locked = Math.floor((scrambleTick / totalScrambleTicks) * text.length);
             setDisplayText(scrambleString(locked));
@@ -1507,34 +1723,42 @@ function PixelDissolveBadge({
         setDisplayText(text);
       }
 
+      const primaryPixel = bg === "transparent" ? fg : bg;
+      const secondaryPixel = bg === "transparent" ? "#F4F3FA" : PALETTE.ink;
+
       animInterval = setInterval(() => {
         step++;
         ctx.clearRect(0, 0, w, h);
+        if (isExit && step >= 5) {
+          setExited(true);
+        }
         const density = step <= 4 ? 0.35 + step * 0.14 : Math.max(0, 1 - (step - 4) * 0.18);
         for (let gy = 0; gy < rows; gy++) {
           for (let gx = 0; gx < cols; gx++) {
             const hash = ((gx * 73856093) ^ (gy * 19349663) ^ (step * 83492791)) & 255;
             if (hash / 255 < density) {
-              ctx.fillStyle = hash % 5 === 0 ? PALETTE.ink : bg;
+              ctx.fillStyle = hash % 5 === 0 ? secondaryPixel : primaryPixel;
               ctx.fillRect(gx * cell, gy * cell, cell - 1, cell - 1);
             }
           }
         }
         if (step >= maxSteps) {
-          clearInterval(animInterval);
+          if (animInterval) clearInterval(animInterval);
           ctx.clearRect(0, 0, w, h);
           setDissolving(false);
-          setDisplayText(text);
+          if (!isExit) {
+            setDisplayText(text);
+          }
         }
       }, 34);
     }, 0);
 
     return () => {
       clearTimeout(timer);
-      clearInterval(animInterval);
-      clearInterval(scrambleInterval);
+      if (animInterval) clearInterval(animInterval);
+      if (scrambleInterval) clearInterval(scrambleInterval);
     };
-  }, [text, triggerKey, bg, scrambleOnEnter]);
+  }, [text, triggerKey, bg, fg, scrambleOnEnter, dissolveMode, animateOnMount]);
 
   return (
     <span
@@ -1543,20 +1767,21 @@ function PixelDissolveBadge({
         position: "relative",
         display: "inline-flex",
         alignItems: "center",
-        background: bg,
+        background: exited ? "transparent" : bg,
         color: fg,
         fontFamily: DISPLAY_FONT,
         fontWeight: 700,
         fontSize,
-        lineHeight: 0.92,
+        lineHeight,
         letterSpacing: "-0.02em",
         textTransform: "uppercase",
+        whiteSpace,
         padding,
         borderRadius: 0,
         userSelect: "none",
       }}
     >
-      <span style={{ opacity: dissolving ? 0.35 : 1, transition: "opacity 80ms linear" }}>
+      <span style={{ opacity: exited ? 0 : dissolving ? 0.35 : 1, transition: "opacity 80ms linear" }}>
         {displayText}
       </span>
       <canvas
@@ -1576,7 +1801,7 @@ function PixelDissolveBadge({
 }
 
 
-/** 1a. HeroEvolveTitle: "THE DIGITAL WORLD HAS" + [EVOLVED.] -> prima il posto è vuoto, poi l'animazione porta a EVOLVED */
+/** 1a. HeroEvolveTitle: "THE THREATS" + [EVOLVE] -> EVOLVE sale sopra -> YOUR BUSINESS -> dissolve dither e loop */
 function HeroEvolveTitle({
   replayKey,
   onReplay,
@@ -1584,146 +1809,209 @@ function HeroEvolveTitle({
   replayKey: number;
   onReplay: () => void;
 }) {
-  const [phase, setPhase] = useState<"empty" | "visible">("empty");
+  const [phase, setPhase] = useState<
+    "empty" | "animating" | "settled" | "rising" | "your" | "business" | "exiting"
+  >("empty");
+  const [cycle, setCycle] = useState(0);
+  const [metrics, setMetrics] = useState({ riseY: 120, evolveW: 360 });
+  const evolveRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const measure = () => {
+      if (!mounted || !evolveRef.current) return;
+      if (phase === "animating" || phase === "exiting") return;
+      const nextRiseY = evolveRef.current.offsetTop;
+      const nextEvolveW = evolveRef.current.offsetWidth;
+      setMetrics((prev) =>
+        prev.riseY === nextRiseY && prev.evolveW === nextEvolveW
+          ? prev
+          : { riseY: nextRiseY, evolveW: nextEvolveW }
+      );
+    };
+    const raf = requestAnimationFrame(measure);
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      document.fonts.ready.then(measure).catch(() => {});
+    }
+    window.addEventListener("resize", measure);
+    return () => {
+      mounted = false;
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", measure);
+    };
+  }, [replayKey, cycle, phase]);
 
   useEffect(() => {
     let active = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const schedule = (fn: () => void, ms: number) => {
+      timers.push(
+        setTimeout(() => {
+          if (active) fn();
+        }, ms)
+      );
+    };
 
-    // Passaggio 1: all'inizio il posto di EVOLVED è completamente vuoto
-    const t0 = setTimeout(() => {
-      if (active) setPhase("empty");
-    }, 0);
-
-    // Passaggio 2: dopo ~1.3s parte l'animazione dither + decodifica che porta a EVOLVED (e lì resta)
-    const t1 = setTimeout(() => {
-      if (active) setPhase("visible");
-    }, 1300);
+    // Passaggio 1: THE THREATS visibile, il posto sotto è vuoto
+    schedule(() => setPhase("empty"), 0);
+    // Passaggio 2: dopo ~1.3s entra EVOLVE con dissolvenza dither + scramble
+    schedule(() => setPhase("animating"), 1300);
+    // Passaggio 3: EVOLVE resta visibile sotto THE THREATS
+    schedule(() => setPhase("settled"), 1800);
+    // Passaggio 4: EVOLVE sale sopra THE THREATS
+    schedule(() => setPhase("rising"), 3000);
+    // Passaggio 5: compare YOUR a destra
+    schedule(() => setPhase("your"), 3650);
+    // Passaggio 6: compare BUSINESS sotto YOUR
+    schedule(() => setPhase("business"), 4000);
+    // Passaggio 7: dopo ~3.2s la frase EVOLVE YOUR BUSINESS svanisce con lo stesso effetto dither
+    schedule(() => setPhase("exiting"), 7200);
+    // Passaggio 8: riparte il ciclo tornando a THE THREATS
+    schedule(() => setCycle((c) => c + 1), 7750);
 
     return () => {
       active = false;
-      clearTimeout(t0);
-      clearTimeout(t1);
+      timers.forEach(clearTimeout);
     };
-  }, [replayKey]);
+  }, [replayKey, cycle]);
 
   const isEmpty = phase === "empty";
+  const isExiting = phase === "exiting";
+  const isRising =
+    phase === "rising" || phase === "your" || phase === "business" || isExiting;
+  const showYour = phase === "your" || phase === "business" || isExiting;
+  const showBusiness = phase === "business" || isExiting;
+  const rightColOffset = metrics.evolveW + Math.max(12, Math.round(metrics.evolveW * 0.065));
 
   return (
     <h1
       onClick={onReplay}
+      title="Clicca per rivedere l'animazione"
       style={{
         position: "relative",
         margin: 0,
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-start",
-        gap: "0.12em",
+        gap: "0.18em",
         textTransform: "uppercase",
         cursor: "pointer",
         width: "100%",
       }}
     >
-      {/* Riga 1: THE DIGITAL WORLD HAS */}
+      {/* Riga 1: THE THREATS (svanisce quando EVOLVE sale, riappare a fine ciclo) */}
       <span
         style={{
           fontFamily: DISPLAY_FONT,
           fontWeight: 700,
-          fontSize: "clamp(2.4rem, 6.6vw, 6.4rem)",
+          fontSize: "clamp(2.35rem, 7.6vw, 7.4rem)",
           lineHeight: 0.94,
           letterSpacing: "-0.02em",
           color: PALETTE.ink,
+          whiteSpace: "nowrap",
+          opacity: isRising ? 0 : 1,
+          transform: isRising ? "translateY(-14px)" : "translateY(0)",
+          transition: "opacity 340ms ease, transform 420ms ease",
           pointerEvents: "none",
         }}
       >
-        THE DIGITAL WORLD HAS
+        THE THREATS
       </span>
 
-      {/* Riga 2: EVOLVED. (prima vuoto, poi animazione che porta alla parola) */}
+      {/* Riga 2: EVOLVE (vuoto iniziale -> entrata dither -> ascesa -> uscita dither) */}
       <div
+        ref={evolveRef}
         style={{
           position: "relative",
           zIndex: 2,
           opacity: isEmpty ? 0 : 1,
           pointerEvents: isEmpty ? "none" : "auto",
-          transition: "opacity 110ms ease",
+          transform: isRising ? `translateY(-${metrics.riseY}px)` : "translateY(0)",
+          transition: isEmpty
+            ? "none"
+            : "transform 620ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms ease",
         }}
       >
         <PixelDissolveBadge
-          text="EVOLVED."
-          triggerKey={isEmpty ? `${replayKey}-hidden` : `${replayKey}-shown`}
-          scrambleOnEnter={!isEmpty}
+          text="EVOLVE"
+          triggerKey={
+            isEmpty
+              ? `${replayKey}-${cycle}-empty`
+              : isExiting
+                ? `${replayKey}-${cycle}-exit`
+                : `${replayKey}-${cycle}-visible`
+          }
+          dissolveMode={isExiting ? "exit" : "enter"}
+          animateOnMount={!isEmpty}
+          scrambleOnEnter={!isEmpty && !isExiting}
           bg={PALETTE.blue}
           fg="#F4F3FA"
-          fontSize="clamp(3rem, 8.6vw, 8.2rem)"
+          fontSize="clamp(2.45rem, 9vw, 9.2rem)"
           padding="0.08em 0.28em"
         />
       </div>
-    </h1>
-  );
-}
 
-
-/** 2. TypewriterBar: scrive lettera per lettera spingendo il cursore verticale | */
-function TypewriterBar({
-  text,
-  cursorColor = PALETTE.blue,
-  speedMs = 45,
-  style,
-}: {
-  text: string;
-  cursorColor?: string;
-  speedMs?: number;
-  style?: React.CSSProperties;
-}) {
-  const [shown, setShown] = useState(text);
-  const rootRef = useRef<HTMLSpanElement | null>(null);
-  const startedRef = useRef(false);
-
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-
-    const runTyping = () => {
-      if (startedRef.current) return;
-      startedRef.current = true;
-      let i = 0;
-      setShown("");
-      const timer = setInterval(() => {
-        i++;
-        setShown(text.slice(0, i));
-        if (i >= text.length) clearInterval(timer);
-      }, speedMs);
-    };
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          runTyping();
-          obs.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [text, speedMs]);
-
-  return (
-    <span ref={rootRef} style={{ display: "inline-flex", alignItems: "center", ...style }}>
-      <span>{shown}</span>
-      <span
-        aria-hidden="true"
+      {/* A destra di EVOLVE compare YOUR e sotto BUSINESS */}
+      <div
         style={{
-          display: "inline-block",
-          width: "0.08em",
-          minWidth: "3px",
-          height: "0.95em",
-          background: cursorColor,
-          marginLeft: "0.08em",
-          verticalAlign: "middle",
+          position: "absolute",
+          top: 0,
+          left: `${rightColOffset}px`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: "0.14em",
+          pointerEvents: "none",
         }}
-      />
-    </span>
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            opacity: showYour ? 1 : 0,
+            transform: showYour ? "translateY(0)" : "translateY(18px)",
+            transition: isEmpty
+              ? "none"
+              : "opacity 360ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
+        >
+          <PixelDissolveBadge
+            text="YOUR"
+            triggerKey={`${replayKey}-${cycle}-${isExiting ? "exit" : "idle"}`}
+            dissolveMode={isExiting ? "exit" : "enter"}
+            animateOnMount={isExiting}
+            bg="transparent"
+            fg={PALETTE.ink}
+            fontSize="clamp(2.35rem, 7.6vw, 7.4rem)"
+            lineHeight={0.94}
+            whiteSpace="nowrap"
+            padding="0"
+          />
+        </span>
+        <span
+          style={{
+            display: "inline-flex",
+            opacity: showBusiness ? 1 : 0,
+            transform: showBusiness ? "translateY(0)" : "translateY(18px)",
+            transition: isEmpty
+              ? "none"
+              : "opacity 380ms ease, transform 440ms cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
+        >
+          <PixelDissolveBadge
+            text="BUSINESS"
+            triggerKey={`${replayKey}-${cycle}-${isExiting ? "exit" : "idle"}`}
+            dissolveMode={isExiting ? "exit" : "enter"}
+            animateOnMount={isExiting}
+            bg="transparent"
+            fg={PALETTE.ink}
+            fontSize="clamp(2.35rem, 7.6vw, 7.4rem)"
+            lineHeight={0.94}
+            whiteSpace="nowrap"
+            padding="0"
+          />
+        </span>
+      </div>
+    </h1>
   );
 }
 
@@ -1843,7 +2131,6 @@ const DIFF_BANDS: Array<{
   badgeBg: string;
   badgeFg: string;
   scene: DitherSceneKind;
-  step: string;
   title: string;
   body: string[];
   statement: string;
@@ -1854,8 +2141,7 @@ const DIFF_BANDS: Array<{
     fg: "#F4F3FA",
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
-    scene: "structureRetool",
-    step: "01 // RETOOL",
+    scene: "torus",
     title: "Rimetti in discussione i tuoi strumenti.",
     body: [
       "Quello che funzionava cinque anni fa potrebbe non essere più sufficiente oggi.",
@@ -1870,8 +2156,7 @@ const DIFF_BANDS: Array<{
     fg: "#F4F3FA",
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
-    scene: "structureAdapt",
-    step: "02 // ADAPT",
+    scene: "mutant",
     title: "Cambia il modo in cui affronti i rischi.",
     body: [
       "Non basta installare una nuova tecnologia se continui a utilizzarla con le stesse abitudini.",
@@ -1886,8 +2171,7 @@ const DIFF_BANDS: Array<{
     fg: PALETTE.bg,
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
-    scene: "structureEvolve",
-    step: "03 // EVOLVE",
+    scene: "hollowCube",
     title: "Non aspettare che sia un problema a farti cambiare.",
     body: [
       "Le minacce evolvono. Le tecnologie cambiano. Gli obblighi normativi possono cambiare.",
@@ -2079,7 +2363,7 @@ export function LaraconCybersecSite() {
       }}
     >
       {/* =====================================================================
-       * 01 — HERO ("THE DIGITAL WORLD HAS EVOLVED.")
+       * 01 — HERO ("THE THREATS" -> "EVOLVE YOUR BUSINESS")
        * =================================================================== */}
       <section
         id="hero"
@@ -2087,19 +2371,18 @@ export function LaraconCybersecSite() {
         style={{
           minHeight: "88vh",
           borderBottom: `1px solid ${PALETTE.slate}`,
-          display: "grid",
-          gridTemplateRows: "1fr",
-          padding: "clamp(28px, 5vw, 56px) clamp(20px, 4vw, 48px)",
+          display: "flex",
+          flexDirection: "column",
+          padding: "clamp(28px, 5vw, 56px) clamp(20px, 4vw, 48px) 14px clamp(20px, 4vw, 48px)",
         }}
       >
         <div
           style={{
+            flex: 1,
             display: "flex",
             flexDirection: "column",
-            justifyContent: "center",
             alignItems: "flex-start",
             textAlign: "left",
-            gap: "22px",
             maxWidth: "1280px",
             width: "100%",
             margin: "0 auto",
@@ -2107,33 +2390,32 @@ export function LaraconCybersecSite() {
         >
           <div
             style={{
-              fontSize: "12px",
-              letterSpacing: "0.14em",
-              color: PALETTE.blue,
-              fontWeight: 700,
-              textTransform: "uppercase",
+              flex: 1,
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              paddingBottom: "clamp(24px, 4vh, 48px)",
             }}
           >
-            01 // IL CAMBIAMENTO
+            <HeroEvolveTitle
+              replayKey={replayNonce}
+              onReplay={() => setReplayNonce((n) => n + 1)}
+            />
           </div>
-
-          <HeroEvolveTitle
-            replayKey={replayNonce}
-            onReplay={() => setReplayNonce((n) => n + 1)}
-          />
 
           <div
             style={{
-              maxWidth: "62ch",
               display: "flex",
               flexDirection: "column",
-              gap: "12px",
-              marginTop: "6px",
+              alignItems: "flex-start",
+              gap: "14px",
+              marginTop: "auto",
             }}
           >
             <p
               style={{
                 margin: 0,
+                maxWidth: "62ch",
                 fontSize: "clamp(1.05rem, 1.4vw, 1.2rem)",
                 lineHeight: 1.45,
                 fontWeight: 700,
@@ -2142,60 +2424,50 @@ export function LaraconCybersecSite() {
             >
               La tua azienda è rimasta al passo?
             </p>
-            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: PALETTE.ink }}>
-              Il mondo digitale cambia continuamente. Nuove tecnologie, nuove minacce e nuove responsabilità per chi fa impresa.
-            </p>
-            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B0AEB2" }}>
-              Ma mentre tutto evolve, molte aziende continuano ad affidarsi a sistemi, strumenti e abitudini che non vengono verificati da tempo.
-            </p>
-            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B0AEB2" }}>
-              Il rischio non è soltanto rimanere indietro. È esporsi, spesso senza saperlo, a intrusioni informatiche, interruzioni operative e possibili conseguenze normative.
-            </p>
-          </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "flex-start",
-              gap: "12px",
-              marginTop: "6px",
-            }}
-          >
-            <Link
-              href="/prenota"
+            <div
               style={{
-                padding: "14px 24px",
-                background: PALETTE.red,
-                color: "#ffffff",
-                fontFamily: DISPLAY_FONT,
-                fontSize: "1.25rem",
-                letterSpacing: "0.02em",
-                textTransform: "uppercase",
-                textDecoration: "none",
-                borderRadius: 0,
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "flex-start",
+                gap: "12px",
               }}
             >
-              Parliamo della tua azienda →
-            </Link>
-            <a
-              href="#go-deeper"
-              style={{
-                padding: "14px 20px",
-                background: "transparent",
-                color: PALETTE.ink,
-                border: `1px solid ${PALETTE.ink}`,
-                fontFamily: MONO_FONT,
-                fontSize: "12px",
-                textTransform: "uppercase",
-                textDecoration: "none",
-                borderRadius: 0,
-                display: "inline-flex",
-                alignItems: "center",
-              }}
-            >
-              Scopri cosa è cambiato ↓
-            </a>
+              <Link
+                href="/prenota"
+                style={{
+                  padding: "14px 24px",
+                  background: PALETTE.red,
+                  color: "#ffffff",
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: "1.25rem",
+                  letterSpacing: "0.02em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  borderRadius: 0,
+                }}
+              >
+                Parliamo della tua azienda →
+              </Link>
+              <a
+                href="#go-deeper"
+                style={{
+                  padding: "14px 20px",
+                  background: "transparent",
+                  color: PALETTE.ink,
+                  border: `1px solid ${PALETTE.ink}`,
+                  fontFamily: MONO_FONT,
+                  fontSize: "12px",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  borderRadius: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
+              >
+                Scopri cosa è cambiato ↓
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -2259,10 +2531,6 @@ export function LaraconCybersecSite() {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: "13px", letterSpacing: "0.14em", marginBottom: "16px", color: "#F4F3FA" }}>
-              <TypewriterBar text="02 // LA CONSAPEVOLEZZA" cursorColor={PALETTE.red} speedMs={55} />
-            </div>
-
             <h2
               style={{
                 margin: 0,
@@ -2363,9 +2631,6 @@ export function LaraconCybersecSite() {
         >
           {/* Intestazione Sezione 03 */}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "68ch" }}>
-            <div style={{ fontSize: "12px", color: PALETTE.red, letterSpacing: "0.14em", fontWeight: 700 }}>
-              03 // DALL&apos;INCERTEZZA ALLA CONSAPEVOLEZZA
-            </div>
             <h2
               style={{
                 margin: 0,
@@ -2382,9 +2647,6 @@ export function LaraconCybersecSite() {
               <br />
               CIÒ CHE NON CONOSCI.
             </h2>
-            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#B8B6BA" }}>
-              Non servono necessariamente più strumenti. Serve prima comprendere se quelli che utilizzi sono adeguati e dove potrebbero nascondersi i problemi.
-            </p>
           </div>
 
           {/* 3 Card grandi in sticky stacking */}
@@ -2520,9 +2782,6 @@ export function LaraconCybersecSite() {
           }}
         >
           <div style={{ maxWidth: "1280px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ fontSize: "12px", color: PALETTE.blue, letterSpacing: "0.14em", fontWeight: 700 }}>
-              04 // LE TRE RISPOSTE AL CAMBIAMENTO
-            </div>
             <h2
               style={{
                 margin: 0,
@@ -2550,7 +2809,7 @@ export function LaraconCybersecSite() {
           </div>
         </div>
 
-        {/* 3 Bande Widescreen con la stessa struttura 3D in sequenza (frammentata -> in modifica -> coesa) */}
+        {/* 3 Bande Widescreen con figure 3D in Bayer dither (torus / mutant / hollowCube) */}
         {DIFF_BANDS.map((band) => (
           <div
             key={band.word}
@@ -2571,7 +2830,7 @@ export function LaraconCybersecSite() {
                 gap: "36px",
               }}
             >
-              {/* Parte SX: La stessa struttura digitale che evolve attraverso i 3 stati */}
+              {/* Parte SX: Figura 3D dithered + Badge parola */}
               <div
                 style={{
                   position: "relative",
@@ -2602,9 +2861,6 @@ export function LaraconCybersecSite() {
 
               {/* Parte DX: Risposta strategica */}
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", opacity: 0.88 }}>
-                  {band.step}
-                </div>
                 <h3
                   style={{
                     margin: 0,
@@ -2640,22 +2896,6 @@ export function LaraconCybersecSite() {
             </div>
           </div>
         ))}
-
-        {/* Chiusura Sezione 04 */}
-        <div style={{ padding: "28px clamp(20px, 4vw, 48px)", background: PALETTE.bg }}>
-          <p
-            style={{
-              maxWidth: "1280px",
-              margin: "0 auto",
-              fontSize: "14px",
-              lineHeight: 1.6,
-              fontStyle: "italic",
-              color: PALETTE.ink,
-            }}
-          >
-            Ogni azienda parte da una situazione diversa. Ed è da quella situazione che bisogna cominciare.
-          </p>
-        </div>
       </section>
 
       {/* =====================================================================
@@ -2708,9 +2948,6 @@ export function LaraconCybersecSite() {
           }}
         >
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "14px", alignItems: "center" }}>
-            <div style={{ fontSize: "12px", color: PALETTE.dim, letterSpacing: "0.14em", fontWeight: 700 }}>
-              05 // TRE REALTÀ, RESPONSABILITÀ DIVERSE
-            </div>
             <h2
               style={{
                 margin: 0,
@@ -2729,7 +2966,7 @@ export function LaraconCybersecSite() {
             </h2>
           </div>
 
-          {/* 3 Card situazionali selezionabili: ciascuna mostra subito una situazione riconoscibile */}
+          {/* 3 Card selezionabili per tipologia di realtà aziendale */}
           <div
             role="tablist"
             aria-label="Seleziona il tipo di realtà aziendale"
@@ -2761,38 +2998,22 @@ export function LaraconCybersecSite() {
                     fontFamily: MONO_FONT,
                     display: "flex",
                     flexDirection: "column",
-                    justifyContent: "space-between",
-                    gap: "12px",
+                    justifyContent: "flex-start",
+                    gap: "8px",
                   }}
                 >
-                  <div>
-                    <div style={{ fontSize: "11px", opacity: 0.8, marginBottom: "8px", letterSpacing: "0.08em" }}>
-                      {seg.code}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: DISPLAY_FONT,
-                        fontSize: "1.55rem",
-                        textTransform: "uppercase",
-                        lineHeight: 1.05,
-                        marginBottom: "10px",
-                      }}
-                    >
-                      {seg.label}
-                    </div>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "13px",
-                        lineHeight: 1.5,
-                        opacity: isSelected ? 0.96 : 0.78,
-                      }}
-                    >
-                      {seg.headline}
-                    </p>
+                  <div style={{ fontSize: "11px", opacity: 0.8, letterSpacing: "0.08em" }}>
+                    {seg.code}
                   </div>
-                  <div style={{ fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.85 }}>
-                    {isSelected ? "● SELEZIONATO" : "APRI APPROFONDIMENTO →"}
+                  <div
+                    style={{
+                      fontFamily: DISPLAY_FONT,
+                      fontSize: "1.55rem",
+                      textTransform: "uppercase",
+                      lineHeight: 1.05,
+                    }}
+                  >
+                    {seg.label}
                   </div>
                 </button>
               );
@@ -2812,18 +3033,6 @@ export function LaraconCybersecSite() {
             }}
           >
             <div style={{ borderBottom: "1px solid #262428", paddingBottom: "16px" }}>
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: buyer.badgeColor,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  marginBottom: "8px",
-                  fontWeight: 700,
-                }}
-              >
-                {buyer.code} {"//"} {buyer.label}
-              </div>
               <h3
                 style={{
                   margin: 0,
@@ -2918,18 +3127,6 @@ export function LaraconCybersecSite() {
             gap: "20px",
           }}
         >
-          <span
-            style={{
-              fontSize: "12px",
-              letterSpacing: "0.14em",
-              fontWeight: 700,
-              color: PALETTE.red,
-              textTransform: "uppercase",
-            }}
-          >
-            06 // DALLA CONSAPEVOLEZZA ALL&apos;AZIONE
-          </span>
-
           <h2
             style={{
               margin: 0,
@@ -2964,9 +3161,6 @@ export function LaraconCybersecSite() {
             </p>
             <p style={{ margin: "4px 0", fontSize: "15.5px", lineHeight: 1.55, fontWeight: 700, color: PALETTE.bg }}>
               Non devi conoscere tutte le risposte oggi. Devi sapere da dove iniziare a cercarle.
-            </p>
-            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.65, color: "#1B1A1D" }}>
-              Raccontami la tua situazione. Possiamo valutare insieme quali aspetti meritano una verifica e quale potrebbe essere il primo passo concreto.
             </p>
           </div>
 
@@ -3007,18 +3201,6 @@ export function LaraconCybersecSite() {
               Contatto diretto
             </a>
           </div>
-
-          <p
-            style={{
-              margin: "2px 0 0 0",
-              fontSize: "12.5px",
-              lineHeight: 1.5,
-              fontStyle: "italic",
-              color: "#262428",
-            }}
-          >
-            30 minuti per parlare della tua situazione, senza impegno e senza soluzioni preconfezionate.
-          </p>
         </div>
 
         {/* Sole / Semisfera rossa dithered che sorge dal basso */}

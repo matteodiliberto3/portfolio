@@ -8,8 +8,7 @@ export function BackHome({ className, children }: { className?: string; children
   return (
     <Link
       className={className}
-      href="/#contatto"
-      scroll={false}
+      href="/"
       onClick={() => {
         const html = document.documentElement;
         html.dataset.navAway = "";
