@@ -21,11 +21,14 @@ interface AsciiCell {
   gy: number;
   glyph: string;
   color: string;
+  brightColor: string;
+  tileColor: string | null;
   revealOrder: number;
 }
 
 // Monospace density ramp ordered strictly by visual pixel coverage on #010101.
 const ASCII_RAMP = ".:;-~=+*x0%#8@";
+const SUIT_CIPHER_RAMP = ".:;-=+0135689#@";
 const CIPHER_GLYPHS = "01#<>*+=/:;[]~";
 const DEFAULT_ACCENTS = ["#3E3EE0", "#C50B3F", "#F4F3FA"] as const;
 
@@ -157,25 +160,25 @@ function buildForegroundMask(
 
     const luma = 0.299 * r + 0.587 * g + 0.114 * b;
     const bgLuma = 0.299 * br + 0.587 * bg + 0.114 * bb;
-    if (luma < 132 || luma < bgLuma - 56) return false;
+    if (luma < 118 || luma < bgLuma - 68) return false;
 
-    // Exclude cool navy clothing fringes.
-    if (b - r > 6) return false;
+    // Exclude dark/midtone cool navy clothing fringes while allowing bright cool-lit wall shadows.
+    if (b - r > 18 && luma < 155) return false;
 
-    // Neutral/beige plaster keeps red close to green; human skin jumps sharply in (r - g).
+    // Smooth plaster drifts gradually across the wall; skin jumps sharply relative to local perimeter tone.
     const redGreen = r - g;
     const bgRedGreen = br - bg;
     const rgDelta = redGreen - bgRedGreen;
     const warmthDelta = r - b - (br - bb);
-    if (redGreen > 22 || rgDelta > 12 || warmthDelta > 20) return false;
+    if ((redGreen > 31 && r - b > 54) || rgDelta > 13 || warmthDelta > 22) return false;
 
     const dist = Math.hypot(r - br, g - bg, b - bb);
-    if (dist > 56) return false;
+    if (dist > 70) return false;
 
     if (prevIdx >= 0) {
       const pp4 = prevIdx * 4;
       const stepDiff = Math.hypot(r - data[pp4], g - data[pp4 + 1], b - data[pp4 + 2]);
-      if (stepDiff > 22) return false;
+      if (stepDiff > 24) return false;
     }
 
     return true;
@@ -192,10 +195,13 @@ function buildForegroundMask(
 
   for (let x = 0; x < segW; x++) {
     trySeed(x, 0);
+    trySeed(x, 1);
   }
   for (let y = 0; y < segH; y++) {
     trySeed(0, y);
+    trySeed(1, y);
     trySeed(segW - 1, y);
+    trySeed(segW - 2, y);
   }
   const bottomMargin = Math.floor(segW * 0.09);
   for (let x = 0; x < bottomMargin; x++) {
@@ -322,8 +328,8 @@ function buildAsciiCells(
   rows: number,
   logicalSize: number
 ): AsciiCell[] {
-  const segW = 320;
-  const segH = 320;
+  const segW = 384;
+  const segH = 384;
 
   const offscreen = document.createElement("canvas");
   offscreen.width = segW;
@@ -421,42 +427,97 @@ function buildAsciiCells(
       }
       const blurLum = lumN > 0 ? lumSum / lumN : lum;
       const detail = lum - blurLum;
-      const sharpLum = clamp01(lum + detail * 0.34);
+      const sharpLum = clamp01(lum + detail * 0.42);
 
-      // Compensate glyph-vs-void brightness loss on #010101 while keeping dark facial creases expressive.
-      const isFineDarkCrease = detail < -0.05 && ny < 0.78;
       const rawR = gridR[idx];
       const rawG = gridG[idx];
       const rawB = gridB[idx];
 
-      const liftGamma = (channel: number, suitBias: number) => {
-        const lifted = Math.pow(clamp01(channel / 255), 0.78) * 255;
-        const suitBoost = isFineDarkCrease ? 4 : Math.pow(Math.max(0, 1 - lum), 1.7) * suitBias;
-        return clampByte(lifted + suitBoost);
-      };
+      // Distinguish navy blazer weave from hair/eyebrows/pupils so dark facial features stay obsidian-sharp.
+      const isNavyFabric = rawB - rawR > 4 && rawB > 22 && lum < 0.36;
+      const isFineDarkCrease = detail < -0.045 && ny < 0.82 && !isNavyFabric;
+      const cellHash = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
 
-      const rComp = liftGamma(rawR, 34);
-      const gComp = liftGamma(rawG, 40);
-      const bComp = liftGamma(rawB, 56);
+      let rOut: number;
+      let gOut: number;
+      let bOut: number;
+      let tileAlpha = 0;
+      let glyph: string;
+      let color: string;
+      let tileColor: string | null = null;
 
-      const bayerOffset = (bRow[gx & 3] / 16 - 0.5) * 0.065;
-      const minFloor = isFineDarkCrease ? 0.02 : 0.13;
-      const tone = clamp01(Math.max(minFloor, sharpLum * 0.96 + 0.06) + bayerOffset);
+      if (isNavyFabric) {
+        // Suit weave: subtle midnight-navy micro-tiles + crisp highlighted cipher digits along blazer folds.
+        const foldLum = clamp01(sharpLum * 1.65);
+        const tileR = clampByte(rawR * 0.85 + 6);
+        const tileG = clampByte(rawG * 0.92 + 11);
+        const tileB = clampByte(rawB * 1.15 + 24);
+        tileAlpha = alpha * (0.14 + foldLum * 0.42);
 
-      const rampIdx = Math.min(
-        ASCII_RAMP.length - 1,
-        Math.max(0, Math.floor(tone * (ASCII_RAMP.length - 0.01)))
-      );
-      const glyph = ASCII_RAMP[rampIdx];
+        const gLift = 1.25 + (1 - foldLum) * 0.25;
+        rOut = clampByte(rawR * gLift + 16);
+        gOut = clampByte(rawG * gLift + 24);
+        bOut = clampByte(rawB * gLift + 48);
 
-      const color =
+        const bayerOffset = (bRow[gx & 3] / 16 - 0.5) * 0.045;
+        const suitTone = clamp01(foldLum * 0.78 + 0.14 + bayerOffset);
+        const baseIdx = Math.floor(suitTone * (SUIT_CIPHER_RAMP.length - 0.01));
+        const rampIdx = Math.min(
+          SUIT_CIPHER_RAMP.length - 1,
+          Math.max(0, baseIdx + (cellHash % 3) - 1)
+        );
+        glyph = SUIT_CIPHER_RAMP[rampIdx];
+        tileColor = `rgba(${tileR}, ${tileG}, ${tileB}, ${tileAlpha.toFixed(2)})`;
+        color =
+          alpha >= 0.98
+            ? `rgb(${rOut}, ${gOut}, ${bOut})`
+            : `rgba(${rOut}, ${gOut}, ${bOut}, ${alpha.toFixed(2)})`;
+      } else {
+        // Skin, sclera, shirt, hands, and hair: preserve deep black creases while lifting daylight photographic luminance via matrix micro-tiles.
+        const curveExp = isFineDarkCrease || lum < 0.14 ? 1.06 : 0.84;
+        const liftChannel = (channel: number) =>
+          clampByte(Math.pow(clamp01(channel / 255), curveExp) * 255);
+
+        rOut = liftChannel(rawR);
+        gOut = liftChannel(rawG);
+        bOut = liftChannel(rawB);
+
+        const litMix = smoothstep(0.16, 0.72, sharpLum);
+        tileAlpha = isFineDarkCrease ? alpha * 0.12 : alpha * litMix * 0.9;
+        if (tileAlpha > 0.04) {
+          tileColor = `rgba(${rOut}, ${gOut}, ${bOut}, ${tileAlpha.toFixed(2)})`;
+        }
+
+        const bayerOffset = (bRow[gx & 3] / 16 - 0.5) * 0.025;
+        const minFloor = isFineDarkCrease || lum < 0.14 ? 0.01 : 0.08;
+        const tone = clamp01(Math.max(minFloor, sharpLum) + bayerOffset);
+        const rampIdx = Math.min(
+          ASCII_RAMP.length - 1,
+          Math.max(0, Math.floor(tone * (ASCII_RAMP.length - 0.01)))
+        );
+        glyph = ASCII_RAMP[rampIdx];
+
+        if (tileAlpha > 0.52) {
+          // Stamp delicate monospace ASCII texture inside bright skin/shirt micro-tiles without lowering perceived lightness.
+          const gScale = sharpLum > 0.8 ? 0.92 : 0.76;
+          const gAlpha = alpha * (sharpLum > 0.8 ? 0.22 : 0.36);
+          color = `rgba(${clampByte(rOut * gScale)}, ${clampByte(gOut * gScale)}, ${clampByte(bOut * gScale)}, ${gAlpha.toFixed(2)})`;
+        } else {
+          color =
+            alpha >= 0.98
+              ? `rgb(${rOut}, ${gOut}, ${bOut})`
+              : `rgba(${rOut}, ${gOut}, ${bOut}, ${alpha.toFixed(2)})`;
+        }
+      }
+
+      const brightColor =
         alpha >= 0.98
-          ? `rgb(${rComp}, ${gComp}, ${bComp})`
-          : `rgba(${rComp}, ${gComp}, ${bComp}, ${alpha.toFixed(2)})`;
+          ? `rgb(${rOut}, ${gOut}, ${bOut})`
+          : `rgba(${rOut}, ${gOut}, ${bOut}, ${alpha.toFixed(2)})`;
 
       const nx = gx / Math.max(1, cols - 1);
       const distCenter = Math.hypot((nx - 0.5) * 1.15, ny - 0.42);
-      const hash = (((gx * 73856093) ^ (gy * 19349663)) >>> 0) % 1000;
+      const hash = cellHash % 1000;
       const revealOrder = clamp01(ny * 0.46 + distCenter * 0.36 + (hash / 1000) * 0.18);
 
       cells.push({
@@ -466,6 +527,8 @@ function buildAsciiCells(
         gy,
         glyph,
         color,
+        brightColor,
+        tileColor,
         revealOrder,
       });
     }
@@ -481,9 +544,9 @@ function buildAsciiCells(
 export function AsciiPortraitCanvas({
   src,
   alt,
-  logicalSize = 560,
-  cols = 160,
-  rows = 132,
+  logicalSize = 576,
+  cols = 192,
+  rows = 168,
   bgColor = "#010101",
   accentColors = DEFAULT_ACCENTS,
   className = "",
@@ -513,7 +576,9 @@ export function AsciiPortraitCanvas({
 
     const cellW = logicalSize / cols;
     const cellH = logicalSize / rows;
-    const fontPx = Number((cellH * 1.16).toFixed(2));
+    const tileW = Number((cellW * 0.78).toFixed(2));
+    const tileH = Number((cellH * 0.78).toFixed(2));
+    const fontPx = Number((cellH * 1.18).toFixed(2));
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reducedMotion = motionQuery.matches;
 
@@ -544,6 +609,10 @@ export function AsciiPortraitCanvas({
 
       for (let i = 0; i < cells.length; i++) {
         const cell = cells[i];
+        if (cell.tileColor) {
+          bCtx.fillStyle = cell.tileColor;
+          bCtx.fillRect(cell.cx - tileW * 0.5, cell.cy - tileH * 0.5, tileW, tileH);
+        }
         bCtx.fillStyle = cell.color;
         bCtx.fillText(cell.glyph, cell.cx, cell.cy);
       }
@@ -605,7 +674,7 @@ export function AsciiPortraitCanvas({
                 ctx.fillRect(cell.cx - cellW * 0.5, cell.cy - cellH * 0.5, cellW, cellH);
               }
               const scrambleChar = CIPHER_GLYPHS[pHash % CIPHER_GLYPHS.length];
-              ctx.fillStyle = pHash % 3 === 0 ? accentColors[0] : cell.color;
+              ctx.fillStyle = pHash % 3 === 0 ? accentColors[0] : cell.brightColor;
               ctx.fillText(scrambleChar, cell.cx, cell.cy);
             }
           }
@@ -630,6 +699,10 @@ export function AsciiPortraitCanvas({
             ctx.fillStyle = accentColors[cHash % accentColors.length];
             ctx.fillText(scrambleChar, cell.cx, cell.cy);
           } else {
+            if (cell.tileColor) {
+              ctx.fillStyle = cell.tileColor;
+              ctx.fillRect(cell.cx - tileW * 0.5, cell.cy - tileH * 0.5, tileW, tileH);
+            }
             ctx.fillStyle = cell.color;
             ctx.fillText(cell.glyph, cell.cx, cell.cy);
           }
