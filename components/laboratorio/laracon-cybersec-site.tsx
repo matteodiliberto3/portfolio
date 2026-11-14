@@ -1886,7 +1886,6 @@ function HeroEvolveTitle({
   return (
     <h1
       onClick={onReplay}
-      title="Clicca per rivedere l'animazione"
       style={{
         position: "relative",
         margin: 0,
