@@ -1,5 +1,3 @@
-import { projects } from "@/lib/projects";
-
 /** Canonical origin. www redirects here. */
 export const siteUrl = "https://matteodiliberto.it";
 
@@ -140,20 +138,6 @@ export function faqJsonLd() {
       "@type": "Question",
       name: item.question,
       acceptedAnswer: { "@type": "Answer", text: item.answer },
-    })),
-  };
-}
-
-export function worksJsonLd() {
-  return {
-    "@type": "ItemList",
-    "@id": `${siteUrl}/#lavori`,
-    name: "Lavori di Matteo Di Liberto",
-    itemListElement: projects.map((project, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      url: absoluteUrl(`/lavori/${project.slug}`),
-      name: project.title,
     })),
   };
 }
