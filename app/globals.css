@@ -2436,3 +2436,50 @@ html[data-intro-hold] .portrait-mask img {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
+
+/* ---------- cybersec hero ASCII portrait layout ---------- */
+.cyber-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: clamp(24px, 4.5vh, 40px);
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.cyber-hero-copy {
+  --hero-base-size: clamp(1.95rem, 7.6vw, 5.1rem);
+  --hero-evolve-size: clamp(2.15rem, 8.8vw, 6.1rem);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: clamp(24px, 4vh, 44px);
+  min-width: 0;
+}
+
+.cyber-hero-portrait {
+  width: min(100%, 380px);
+  justify-self: center;
+}
+
+@media (min-width: 960px) {
+  .cyber-hero-grid {
+    grid-template-columns: minmax(0, 1.25fr) clamp(340px, 35vw, 480px);
+    gap: clamp(28px, 3.5vw, 56px);
+    align-items: center;
+  }
+
+  .cyber-hero-copy {
+    --hero-base-size: clamp(3.05rem, 5.15vw, 4.95rem);
+    --hero-evolve-size: clamp(3.55rem, 6.1vw, 5.85rem);
+    gap: clamp(28px, 4.5vh, 52px);
+  }
+
+  .cyber-hero-portrait {
+    width: 100%;
+    max-width: 480px;
+    justify-self: end;
+  }
+}

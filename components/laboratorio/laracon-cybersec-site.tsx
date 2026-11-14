@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { AsciiPortraitCanvas } from "@/components/laboratorio/ascii-portrait-canvas";
 
 const PHONE_NUMBER = "tel:+393711500055";
 
@@ -1830,6 +1831,13 @@ function HeroEvolveTitle({
       );
     };
     const raf = requestAnimationFrame(measure);
+    const ro =
+      typeof ResizeObserver !== "undefined" && evolveRef.current
+        ? new ResizeObserver(measure)
+        : null;
+    if (ro && evolveRef.current) {
+      ro.observe(evolveRef.current);
+    }
     if (typeof document !== "undefined" && document.fonts?.ready) {
       document.fonts.ready.then(measure).catch(() => {});
     }
@@ -1837,6 +1845,7 @@ function HeroEvolveTitle({
     return () => {
       mounted = false;
       cancelAnimationFrame(raf);
+      ro?.disconnect();
       window.removeEventListener("resize", measure);
     };
   }, [replayKey, cycle, phase]);
@@ -1882,6 +1891,8 @@ function HeroEvolveTitle({
   const showYour = phase === "your" || phase === "business" || isExiting;
   const showBusiness = phase === "business" || isExiting;
   const rightColOffset = metrics.evolveW + Math.max(12, Math.round(metrics.evolveW * 0.065));
+  const baseTitleFontSize = "var(--hero-base-size, clamp(1.95rem, 7.6vw, 5.1rem))";
+  const evolveBadgeFontSize = "var(--hero-evolve-size, clamp(2.15rem, 8.8vw, 6.1rem))";
 
   return (
     <h1
@@ -1903,7 +1914,7 @@ function HeroEvolveTitle({
         style={{
           fontFamily: DISPLAY_FONT,
           fontWeight: 700,
-          fontSize: "clamp(2.35rem, 7.6vw, 7.4rem)",
+          fontSize: baseTitleFontSize,
           lineHeight: 0.94,
           letterSpacing: "-0.02em",
           color: PALETTE.ink,
@@ -1945,7 +1956,7 @@ function HeroEvolveTitle({
           scrambleOnEnter={!isEmpty && !isExiting}
           bg={PALETTE.blue}
           fg="#F4F3FA"
-          fontSize="clamp(2.45rem, 9vw, 9.2rem)"
+          fontSize={evolveBadgeFontSize}
           padding="0.08em 0.28em"
         />
       </div>
@@ -1980,7 +1991,7 @@ function HeroEvolveTitle({
             animateOnMount={isExiting}
             bg="transparent"
             fg={PALETTE.ink}
-            fontSize="clamp(2.35rem, 7.6vw, 7.4rem)"
+            fontSize={baseTitleFontSize}
             lineHeight={0.94}
             whiteSpace="nowrap"
             padding="0"
@@ -2003,7 +2014,7 @@ function HeroEvolveTitle({
             animateOnMount={isExiting}
             bg="transparent"
             fg={PALETTE.ink}
-            fontSize="clamp(2.35rem, 7.6vw, 7.4rem)"
+            fontSize={baseTitleFontSize}
             lineHeight={0.94}
             whiteSpace="nowrap"
             padding="0"
@@ -2362,7 +2373,7 @@ export function LaraconCybersecSite() {
       }}
     >
       {/* =====================================================================
-       * 01 — HERO ("THE THREATS" -> "EVOLVE YOUR BUSINESS")
+       * 01 — HERO ("THE THREATS" -> "EVOLVE YOUR BUSINESS" + RITRATTO ASCII)
        * =================================================================== */}
       <section
         id="hero"
@@ -2371,102 +2382,94 @@ export function LaraconCybersecSite() {
           minHeight: "88vh",
           borderBottom: `1px solid ${PALETTE.slate}`,
           display: "flex",
-          flexDirection: "column",
-          padding: "clamp(28px, 5vw, 56px) clamp(20px, 4vw, 48px) 14px clamp(20px, 4vw, 48px)",
+          alignItems: "center",
+          padding: "clamp(24px, 4.5vw, 52px) clamp(20px, 4vw, 48px)",
         }}
       >
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            textAlign: "left",
-            maxWidth: "1280px",
-            width: "100%",
-            margin: "0 auto",
-          }}
-        >
-          <div
-            style={{
-              flex: 1,
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              paddingBottom: "clamp(24px, 4vh, 48px)",
-            }}
-          >
+        <div className="cyber-hero-grid">
+          <div className="cyber-hero-copy">
             <HeroEvolveTitle
               replayKey={replayNonce}
               onReplay={() => setReplayNonce((n) => n + 1)}
             />
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              gap: "14px",
-              marginTop: "auto",
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                maxWidth: "62ch",
-                fontSize: "clamp(1.05rem, 1.4vw, 1.2rem)",
-                lineHeight: 1.45,
-                fontWeight: 700,
-                color: "#F4F3FA",
-              }}
-            >
-              La tua azienda è rimasta al passo?
-            </p>
 
             <div
               style={{
                 display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "flex-start",
-                gap: "12px",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: "14px",
               }}
             >
-              <Link
-                href="/prenota"
+              <p
                 style={{
-                  padding: "14px 24px",
-                  background: PALETTE.red,
-                  color: "#ffffff",
-                  fontFamily: DISPLAY_FONT,
-                  fontSize: "1.25rem",
-                  letterSpacing: "0.02em",
-                  textTransform: "uppercase",
-                  textDecoration: "none",
-                  borderRadius: 0,
+                  margin: 0,
+                  maxWidth: "48ch",
+                  fontSize: "clamp(1.05rem, 1.4vw, 1.2rem)",
+                  lineHeight: 1.45,
+                  fontWeight: 700,
+                  color: "#F4F3FA",
                 }}
               >
-                Parliamo della tua azienda →
-              </Link>
-              <a
-                href="#go-deeper"
+                La tua azienda è rimasta al passo?
+              </p>
+
+              <div
                 style={{
-                  padding: "14px 20px",
-                  background: "transparent",
-                  color: PALETTE.ink,
-                  border: `1px solid ${PALETTE.ink}`,
-                  fontFamily: MONO_FONT,
-                  fontSize: "12px",
-                  textTransform: "uppercase",
-                  textDecoration: "none",
-                  borderRadius: 0,
-                  display: "inline-flex",
-                  alignItems: "center",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "flex-start",
+                  gap: "12px",
                 }}
               >
-                Scopri cosa è cambiato ↓
-              </a>
+                <Link
+                  href="/prenota"
+                  style={{
+                    padding: "14px 24px",
+                    minHeight: "48px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    background: PALETTE.red,
+                    color: "#ffffff",
+                    fontFamily: DISPLAY_FONT,
+                    fontSize: "1.25rem",
+                    letterSpacing: "0.02em",
+                    textTransform: "uppercase",
+                    textDecoration: "none",
+                    borderRadius: 0,
+                  }}
+                >
+                  Parliamo della tua azienda →
+                </Link>
+                <a
+                  href="#go-deeper"
+                  style={{
+                    padding: "14px 20px",
+                    minHeight: "48px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    background: "transparent",
+                    color: PALETTE.ink,
+                    border: `1px solid ${PALETTE.ink}`,
+                    fontFamily: MONO_FONT,
+                    fontSize: "12px",
+                    textTransform: "uppercase",
+                    textDecoration: "none",
+                    borderRadius: 0,
+                  }}
+                >
+                  Scopri cosa è cambiato ↓
+                </a>
+              </div>
             </div>
+          </div>
+
+          <div className="cyber-hero-portrait">
+            <AsciiPortraitCanvas
+              src="/portrait.jpg"
+              alt="Ritratto di Matteo Di Liberto in stile ASCII art"
+              bgColor={PALETTE.bg}
+            />
           </div>
         </div>
       </section>
