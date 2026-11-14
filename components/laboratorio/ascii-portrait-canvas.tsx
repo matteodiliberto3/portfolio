@@ -24,10 +24,17 @@ interface AsciiCell {
   revealOrder: number;
 }
 
-// Monospace optical density ramp curated for dark #010101 grounds (no spaces inside subject).
-const ASCII_RAMP = ".:;-~=+*x#%8@$";
-const CIPHER_GLYPHS = "01#<>*+=/:;[]_~";
+// Monospace density ramp ordered strictly by visual pixel coverage on #010101.
+const ASCII_RAMP = ".:;-~=+*x0%#8@";
+const CIPHER_GLYPHS = "01#<>*+=/:;[]~";
 const DEFAULT_ACCENTS = ["#3E3EE0", "#C50B3F", "#F4F3FA"] as const;
+
+const BAYER_4X4 = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5],
+];
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
@@ -53,7 +60,7 @@ function estimatePerimeterWall(
 ): { leftBg: Float32Array; rightBg: Float32Array } {
   const rawLeft = new Float32Array(segH * 3);
   const rawRight = new Float32Array(segH * 3);
-  const marginCols = Math.max(4, Math.min(8, Math.floor(segW * 0.04)));
+  const marginCols = Math.max(5, Math.min(12, Math.floor(segW * 0.04)));
 
   for (let y = 0; y < segH; y++) {
     let lr = 0;
@@ -85,7 +92,7 @@ function estimatePerimeterWall(
 
   const leftBg = new Float32Array(segH * 3);
   const rightBg = new Float32Array(segH * 3);
-  const win = 6;
+  const win = 8;
   for (let y = 0; y < segH; y++) {
     const y0 = Math.max(0, y - win);
     const y1 = Math.min(segH - 1, y + win);
@@ -118,8 +125,9 @@ function estimatePerimeterWall(
 }
 
 /**
- * Edge-seeded flood-fill background segmentation that respects bright facial highlights
- * using warmth chroma, edge step deltas, and local plaster interpolation, plus halo de-fringing.
+ * Edge-seeded flood-fill background segmentation tuned for warm-stone studio plaster:
+ * allows natural warm beige shadows on the right wall while blocking peach/red skin chroma,
+ * dark hair, navy jacket, and sharp contour gradients, plus rim halo de-fringing.
  */
 function buildForegroundMask(
   data: Uint8ClampedArray,
@@ -149,14 +157,20 @@ function buildForegroundMask(
 
     const luma = 0.299 * r + 0.587 * g + 0.114 * b;
     const bgLuma = 0.299 * br + 0.587 * bg + 0.114 * bb;
-    if (luma < 160 || luma < bgLuma - 36) return false;
+    if (luma < 132 || luma < bgLuma - 56) return false;
 
-    const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+    // Exclude cool navy clothing fringes.
+    if (b - r > 6) return false;
+
+    // Neutral/beige plaster keeps red close to green; human skin jumps sharply in (r - g).
+    const redGreen = r - g;
+    const bgRedGreen = br - bg;
+    const rgDelta = redGreen - bgRedGreen;
     const warmthDelta = r - b - (br - bb);
-    if (chroma > 34 || warmthDelta > 17) return false;
+    if (redGreen > 22 || rgDelta > 12 || warmthDelta > 20) return false;
 
     const dist = Math.hypot(r - br, g - bg, b - bb);
-    if (dist > 34) return false;
+    if (dist > 56) return false;
 
     if (prevIdx >= 0) {
       const pp4 = prevIdx * 4;
@@ -183,7 +197,7 @@ function buildForegroundMask(
     trySeed(0, y);
     trySeed(segW - 1, y);
   }
-  const bottomMargin = Math.floor(segW * 0.08);
+  const bottomMargin = Math.floor(segW * 0.09);
   for (let x = 0; x < bottomMargin; x++) {
     trySeed(x, segH - 1);
     trySeed(segW - 1 - x, segH - 1);
@@ -231,10 +245,10 @@ function buildForegroundMask(
     alphaMask[i] = bgVisited[i] ? 0 : 1;
   }
 
-  // Feather perimeter 1px transitions and suppress cream wall halo on dark hair/suit edges.
+  // Feather perimeter transitions, strip 1px isolated dust, and pull interior dark hue onto rim halos.
   for (let y = 1; y < segH - 1; y++) {
     const ny = y / (segH - 1);
-    const bottomFade = 1 - smoothstep(0.9, 1.0, ny);
+    const bottomFade = 1 - smoothstep(0.91, 0.992, ny);
 
     for (let x = 1; x < segW - 1; x++) {
       const idx = y * segW + x;
@@ -249,16 +263,20 @@ function buildForegroundMask(
         bgVisited[idx - segW] +
         bgVisited[idx + segW];
 
+      if (bgNeighbors >= 3) {
+        alphaMask[idx] = 0;
+        continue;
+      }
+
       if (bgNeighbors > 0) {
         const p4 = idx * 4;
         const r = data[p4];
         const g = data[p4 + 1];
         const b = data[p4 + 2];
-        const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+        const redGreen = r - g;
         const luma = 0.299 * r + 0.587 * g + 0.114 * b;
 
-        // If edge pixel carries bright neutral studio-wall spill, pull color toward deep interior neighbors.
-        if (chroma < 24 && luma > 105) {
+        if (redGreen < 18 && luma > 102) {
           let sumR = 0;
           let sumG = 0;
           let sumB = 0;
@@ -273,7 +291,7 @@ function buildForegroundMask(
               if (bgVisited[ni]) continue;
               const np4 = ni * 4;
               const nluma = 0.299 * data[np4] + 0.587 * data[np4 + 1] + 0.114 * data[np4 + 2];
-              if (nluma < 115) {
+              if (nluma < 118) {
                 sumR += data[np4];
                 sumG += data[np4 + 1];
                 sumB += data[np4 + 2];
@@ -288,7 +306,7 @@ function buildForegroundMask(
           }
         }
 
-        alphaMask[idx] = Math.max(0.28, 1 - bgNeighbors * 0.22) * bottomFade;
+        alphaMask[idx] = Math.max(0.32, 1 - bgNeighbors * 0.25) * bottomFade;
       } else {
         alphaMask[idx] = bottomFade;
       }
@@ -304,8 +322,8 @@ function buildAsciiCells(
   rows: number,
   logicalSize: number
 ): AsciiCell[] {
-  const segW = 216;
-  const segH = 216;
+  const segW = 320;
+  const segH = 320;
 
   const offscreen = document.createElement("canvas");
   offscreen.width = segW;
@@ -376,6 +394,8 @@ function buildAsciiCells(
 
   for (let gy = 0; gy < rows; gy++) {
     const ny = gy / Math.max(1, rows - 1);
+    const bRow = BAYER_4X4[gy & 3];
+
     for (let gx = 0; gx < cols; gx++) {
       const idx = gy * cols + gx;
       const alpha = gridA[idx];
@@ -383,7 +403,7 @@ function buildAsciiCells(
 
       const lum = gridLum[idx];
 
-      // 3x3 neighborhood luminance average + Sobel gradient for edge contour precision.
+      // Gentle 3x3 detail pass keeps pupils, eyebrows, mouth, and finger gaps crisp without blotching skin.
       let lumSum = 0;
       let lumN = 0;
       for (let dy = -1; dy <= 1; dy++) {
@@ -401,59 +421,38 @@ function buildAsciiCells(
       }
       const blurLum = lumN > 0 ? lumSum / lumN : lum;
       const detail = lum - blurLum;
-      const sharpLum = clamp01(lum + detail * 0.88);
+      const sharpLum = clamp01(lum + detail * 0.34);
 
-      const lAt = (ox: number, oy: number) => {
-        const xx = Math.min(cols - 1, Math.max(0, gx + ox));
-        const yy = Math.min(rows - 1, Math.max(0, gy + oy));
-        const ni = yy * cols + xx;
-        return gridA[ni] > 0.16 ? gridLum[ni] : 0;
-      };
-      const sobelX =
-        -lAt(-1, -1) - 2 * lAt(-1, 0) - lAt(-1, 1) + lAt(1, -1) + 2 * lAt(1, 0) + lAt(1, 1);
-      const sobelY =
-        -lAt(-1, -1) - 2 * lAt(0, -1) - lAt(1, -1) + lAt(-1, 1) + 2 * lAt(0, 1) + lAt(1, 1);
-      const grad = Math.hypot(sobelX, sobelY);
-
-      // Keep pupils, eyebrows, mouth crease, and finger crevices crisp while lifting dark matte suit weave off #010101.
-      const isFineDarkCrease = detail < -0.04;
-      const suitLift = isFineDarkCrease ? 0.02 : Math.pow(Math.max(0, 1 - lum), 1.65) * 0.14;
-
+      // Compensate glyph-vs-void brightness loss on #010101 while keeping dark facial creases expressive.
+      const isFineDarkCrease = detail < -0.05 && ny < 0.78;
       const rawR = gridR[idx];
       const rawG = gridG[idx];
       const rawB = gridB[idx];
-      const mean = (rawR + rawG + rawB) / 3;
-      const satBoost = 1.1;
-      const rBoosted = clampByte(mean + (rawR - mean) * satBoost + suitLift * 195);
-      const gBoosted = clampByte(mean + (rawG - mean) * satBoost + suitLift * 205);
-      const bBoosted = clampByte(mean + (rawB - mean) * satBoost + suitLift * 235);
 
-      const tone = clamp01((sharpLum + suitLift * 0.9 - 0.03) / 0.92);
+      const liftGamma = (channel: number, suitBias: number) => {
+        const lifted = Math.pow(clamp01(channel / 255), 0.78) * 255;
+        const suitBoost = isFineDarkCrease ? 4 : Math.pow(Math.max(0, 1 - lum), 1.7) * suitBias;
+        return clampByte(lifted + suitBoost);
+      };
+
+      const rComp = liftGamma(rawR, 34);
+      const gComp = liftGamma(rawG, 40);
+      const bComp = liftGamma(rawB, 56);
+
+      const bayerOffset = (bRow[gx & 3] / 16 - 0.5) * 0.065;
+      const minFloor = isFineDarkCrease ? 0.02 : 0.13;
+      const tone = clamp01(Math.max(minFloor, sharpLum * 0.96 + 0.06) + bayerOffset);
+
       const rampIdx = Math.min(
         ASCII_RAMP.length - 1,
-        Math.max(0, Math.floor(Math.pow(tone, 0.94) * (ASCII_RAMP.length - 0.01)))
+        Math.max(0, Math.floor(tone * (ASCII_RAMP.length - 0.01)))
       );
-      let glyph = ASCII_RAMP[rampIdx];
-
-      // Use subtle directional strokes along strong garment lapels/collar/silhouette contours, preserving facial glyphs.
-      if (grad > 0.36 && alpha > 0.65 && ny > 0.34) {
-        const angle = Math.atan2(sobelY, sobelX);
-        const deg = ((angle * 180) / Math.PI + 180) % 180;
-        if (deg < 22 || deg > 158) {
-          glyph = "|";
-        } else if (deg >= 68 && deg <= 112) {
-          glyph = "-";
-        } else if (deg >= 22 && deg < 68) {
-          glyph = "/";
-        } else {
-          glyph = "\\";
-        }
-      }
+      const glyph = ASCII_RAMP[rampIdx];
 
       const color =
         alpha >= 0.98
-          ? `rgb(${rBoosted}, ${gBoosted}, ${bBoosted})`
-          : `rgba(${rBoosted}, ${gBoosted}, ${bBoosted}, ${alpha.toFixed(2)})`;
+          ? `rgb(${rComp}, ${gComp}, ${bComp})`
+          : `rgba(${rComp}, ${gComp}, ${bComp}, ${alpha.toFixed(2)})`;
 
       const nx = gx / Math.max(1, cols - 1);
       const distCenter = Math.hypot((nx - 0.5) * 1.15, ny - 0.42);
@@ -482,9 +481,9 @@ function buildAsciiCells(
 export function AsciiPortraitCanvas({
   src,
   alt,
-  logicalSize = 540,
-  cols = 108,
-  rows = 86,
+  logicalSize = 560,
+  cols = 160,
+  rows = 132,
   bgColor = "#010101",
   accentColors = DEFAULT_ACCENTS,
   className = "",
@@ -504,40 +503,62 @@ export function AsciiPortraitCanvas({
     let cancelled = false;
     let rafId = 0;
     let cells: AsciiCell[] = [];
+    let settledBuffer: HTMLCanvasElement | null = null;
     let resolvedFont = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(logicalSize * dpr);
-    canvas.height = Math.round(logicalSize * dpr);
+    const backingSize = Math.round(logicalSize * dpr);
+    canvas.width = backingSize;
+    canvas.height = backingSize;
 
-    const fontPx = Number(((logicalSize / rows) * 1.18).toFixed(2));
+    const cellW = logicalSize / cols;
+    const cellH = logicalSize / rows;
+    const fontPx = Number((cellH * 1.16).toFixed(2));
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reducedMotion = motionQuery.matches;
 
     let animStart = 0;
-    const revealDurationMs = 950;
-    const hoverRadius = logicalSize * 0.085;
-    const hoverDecayMs = 680;
+    const revealDurationMs = 900;
+    const hoverRadius = logicalSize * 0.075;
+    const hoverDecayMs = 650;
 
-    const drawSettled = () => {
-      if (cancelled || cells.length === 0) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const buildSettledBuffer = () => {
+      if (cells.length === 0) return;
+      const buf = document.createElement("canvas");
+      buf.width = backingSize;
+      buf.height = backingSize;
+      const bCtx = buf.getContext("2d", { alpha: true });
+      if (!bCtx) return;
+
+      bCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (bgColor === "transparent") {
-        ctx.clearRect(0, 0, logicalSize, logicalSize);
+        bCtx.clearRect(0, 0, logicalSize, logicalSize);
       } else {
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, logicalSize, logicalSize);
+        bCtx.fillStyle = bgColor;
+        bCtx.fillRect(0, 0, logicalSize, logicalSize);
       }
 
-      ctx.font = `600 ${fontPx}px ${resolvedFont}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      bCtx.font = `600 ${fontPx}px ${resolvedFont}`;
+      bCtx.textAlign = "center";
+      bCtx.textBaseline = "middle";
 
       for (let i = 0; i < cells.length; i++) {
         const cell = cells[i];
-        ctx.fillStyle = cell.color;
-        ctx.fillText(cell.glyph, cell.cx, cell.cy);
+        bCtx.fillStyle = cell.color;
+        bCtx.fillText(cell.glyph, cell.cx, cell.cy);
       }
+
+      settledBuffer = buf;
+    };
+
+    const drawSettled = () => {
+      if (cancelled || cells.length === 0) return;
+      if (!settledBuffer) buildSettledBuffer();
+      if (!settledBuffer) return;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, logicalSize, logicalSize);
+      ctx.drawImage(settledBuffer, 0, 0, logicalSize, logicalSize);
     };
 
     const drawAnimatedFrame = (now: number) => {
@@ -558,51 +579,61 @@ export function AsciiPortraitCanvas({
       const hoverStrength = hoverActive ? clamp01(1 - timeSinceMove / hoverDecayMs) : 0;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (bgColor === "transparent") {
-        ctx.clearRect(0, 0, logicalSize, logicalSize);
-      } else {
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, logicalSize, logicalSize);
-      }
-
       ctx.font = `600 ${fontPx}px ${resolvedFont}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-
       const tickBucket = Math.floor(now / 52);
 
-      for (let i = 0; i < cells.length; i++) {
-        const cell = cells[i];
+      // Fast path after entrance reveal: copy settled GPU buffer and redraw only cells inside pointer ripple.
+      if (revealProgress >= 1 && settledBuffer) {
+        ctx.clearRect(0, 0, logicalSize, logicalSize);
+        ctx.drawImage(settledBuffer, 0, 0, logicalSize, logicalSize);
 
-        if (revealProgress < 1) {
+        if (hoverStrength > 0.02) {
+          const effectiveRadius = hoverRadius * (0.45 + 0.55 * hoverStrength);
+          for (let i = 0; i < cells.length; i++) {
+            const cell = cells[i];
+            const dist = Math.hypot(cell.cx - ptr.x, cell.cy - ptr.y);
+            if (dist >= effectiveRadius) continue;
+
+            const pHash = ((cell.gx * 53 + cell.gy * 127 + tickBucket * 17) >>> 0);
+            if ((pHash % 100) / 100 < hoverStrength * (1 - dist / effectiveRadius) * 0.9) {
+              if (bgColor === "transparent") {
+                ctx.clearRect(cell.cx - cellW * 0.5, cell.cy - cellH * 0.5, cellW, cellH);
+              } else {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(cell.cx - cellW * 0.5, cell.cy - cellH * 0.5, cellW, cellH);
+              }
+              const scrambleChar = CIPHER_GLYPHS[pHash % CIPHER_GLYPHS.length];
+              ctx.fillStyle = pHash % 3 === 0 ? accentColors[0] : cell.color;
+              ctx.fillText(scrambleChar, cell.cx, cell.cy);
+            }
+          }
+        }
+      } else {
+        if (bgColor === "transparent") {
+          ctx.clearRect(0, 0, logicalSize, logicalSize);
+        } else {
+          ctx.fillStyle = bgColor;
+          ctx.fillRect(0, 0, logicalSize, logicalSize);
+        }
+
+        for (let i = 0; i < cells.length; i++) {
+          const cell = cells[i];
           const gate = cell.revealOrder * 0.72;
           if (revealProgress < gate) continue;
+
           const localProgress = clamp01((revealProgress - gate) / 0.28);
           if (localProgress < 0.82) {
             const cHash = ((cell.gx * 97 + cell.gy * 193 + tickBucket * 31) >>> 0);
             const scrambleChar = CIPHER_GLYPHS[cHash % CIPHER_GLYPHS.length];
             ctx.fillStyle = accentColors[cHash % accentColors.length];
             ctx.fillText(scrambleChar, cell.cx, cell.cy);
-            continue;
+          } else {
+            ctx.fillStyle = cell.color;
+            ctx.fillText(cell.glyph, cell.cx, cell.cy);
           }
         }
-
-        if (hoverStrength > 0.02) {
-          const dist = Math.hypot(cell.cx - ptr.x, cell.cy - ptr.y);
-          const effectiveRadius = hoverRadius * (0.45 + 0.55 * hoverStrength);
-          if (dist < effectiveRadius) {
-            const pHash = ((cell.gx * 53 + cell.gy * 127 + tickBucket * 17) >>> 0);
-            if ((pHash % 100) / 100 < hoverStrength * (1 - dist / effectiveRadius) * 0.92) {
-              const scrambleChar = CIPHER_GLYPHS[pHash % CIPHER_GLYPHS.length];
-              ctx.fillStyle = pHash % 3 === 0 ? accentColors[0] : cell.color;
-              ctx.fillText(scrambleChar, cell.cx, cell.cy);
-              continue;
-            }
-          }
-        }
-
-        ctx.fillStyle = cell.color;
-        ctx.fillText(cell.glyph, cell.cx, cell.cy);
       }
 
       if ((revealProgress < 1 || hoverActive) && isVisibleRef.current) {
@@ -639,6 +670,7 @@ export function AsciiPortraitCanvas({
           resolvedFont = computedFont;
         }
         cells = buildAsciiCells(img, cols, rows, logicalSize);
+        buildSettledBuffer();
         animStart = performance.now();
         setStatus("ready");
         if (reducedMotion) {
