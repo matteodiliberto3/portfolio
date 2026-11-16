@@ -2,6 +2,7 @@
 
 import { track } from "@vercel/analytics";
 import Link from "next/link";
+import { ArrowIcon } from "@/components/cyber/arrow-icon";
 import {
   useCallback,
   useEffect,
@@ -160,13 +161,6 @@ export function Booking() {
   const canPrev = month > thisMonth;
   const canNext = month < lastMonth;
 
-  const openDaysCount = useMemo(() => {
-    if (!data) return null;
-    return Object.entries(data.days).filter(
-      ([d, free]) => d.startsWith(month) && d >= data.window.first && d <= data.window.last && free.length > 0,
-    ).length;
-  }, [data, month]);
-
   const go = (by: 1 | -1) => {
     setDir(by);
     setMonth((m) => shiftMonth(m, by));
@@ -282,11 +276,13 @@ export function Booking() {
         <div className="bk-done-actions">
           {booked.meet ? (
             <a className="bk-done-primary press" href={booked.meet} target="_blank" rel="noreferrer">
-              APRI LINK GOOGLE MEET →
+              APRI LINK GOOGLE MEET
+              <ArrowIcon direction="right" variant="display" />
             </a>
           ) : null}
           <Link className={booked.meet ? "bk-done-secondary press" : "bk-done-primary press"} href="/">
-            TORNA AL SITO →
+            TORNA AL SITO
+            <ArrowIcon direction="right" variant="display" />
           </Link>
         </div>
       </section>
@@ -294,9 +290,9 @@ export function Booking() {
   }
 
   return (
-    <div className="bk">
-      {/* ------- colonna sinistra: calendario + contatto diretto ------- */}
-      <div className="bk-left">
+    <div className="bk-layout">
+      <div className="bk">
+        {/* ------- colonna sinistra: calendario ------- */}
         <section className="bk-cal" aria-label="Scegli un giorno">
           <header className="bk-cal-head">
             <button
@@ -306,7 +302,7 @@ export function Booking() {
               disabled={!canPrev}
               aria-label="Mese precedente"
             >
-              ←
+              <ArrowIcon direction="left" variant="icon" />
             </button>
             <h2 className="bk-month" key={month} data-dir={dir}>
               {monthLabel(month)}
@@ -318,7 +314,7 @@ export function Booking() {
               disabled={!canNext}
               aria-label="Mese successivo"
             >
-              →
+              <ArrowIcon direction="right" variant="icon" />
             </button>
           </header>
 
@@ -369,50 +365,17 @@ export function Booking() {
             })}
           </div>
 
-          <div className="bk-legend-row">
-            {loadError ? (
-              <div className="bk-cal-error" role="alert">
-                <span>{loadError}</span>
-                <button type="button" className="bk-retry" onClick={retryMonth}>
-                  RIPROVA
-                </button>
-              </div>
-            ) : (
-              <div className="bk-legend">
-                <span className="bk-legend-item">
-                  <span className="bk-legend-swatch" aria-hidden="true" />
-                  Disponibile
-                </span>
-                <span className="bk-legend-sep" aria-hidden="true">·</span>
-                <span className="bk-legend-item">
-                  {loading
-                    ? "Caricamento disponibilità…"
-                    : openDaysCount === 0
-                      ? "Nessuno slot in questo mese"
-                      : data?.demo
-                        ? "Modalità demo · ora italiana"
-                        : "Ora italiana · 30 min"}
-                </span>
-              </div>
-            )}
-          </div>
+          {loadError ? (
+            <div className="bk-cal-error" role="alert">
+              <span>{loadError}</span>
+              <button type="button" className="bk-retry" onClick={retryMonth}>
+                RIPROVA
+              </button>
+            </div>
+          ) : null}
         </section>
 
-        {/* Fallback diretto con chiamata telefonica */}
-        <section className="bk-direct" aria-label="Contatto telefonico diretto">
-          <div className="bk-direct-copy">
-            <span className="bk-direct-k">CONTATTO DIRETTO</span>
-            <p className="bk-direct-text">
-              Non trovi un orario comodo o preferisci parlarne subito al telefono?
-            </p>
-          </div>
-          <a className="bk-direct-btn press" href={PHONE_NUMBER}>
-            CHIAMA ORA · {PHONE_DISPLAY} →
-          </a>
-        </section>
-      </div>
-
-      {/* ------- colonna destra: scheda iniziale / orari / form ------- */}
+        {/* ------- colonna destra: scheda iniziale / orari / form ------- */}
       <section ref={sideRef} className="bk-side" data-step={activeStep}>
         <ol className="bk-steps" aria-label="Avanzamento prenotazione">
           {STEPS.map((s, idx) => {
@@ -433,9 +396,8 @@ export function Booking() {
         </ol>
 
         {!day ? (
-          <div key="how-it-works" className="bk-panel">
+          <div key="how-it-works" className="bk-panel bk-panel-guide">
             <div className="bk-side-head">
-              <span className="bk-tag">01 // PRIMA DI INIZIARE</span>
               <h2 className="bk-side-title">COME FUNZIONA IL CONFRONTO</h2>
             </div>
 
@@ -459,7 +421,7 @@ export function Booking() {
           <div key={day} className="bk-panel">
             <div className="bk-side-head" aria-live="polite">
               <div className="bk-side-meta">
-                <span className="bk-tag">{slot == null ? "02 // SCEGLI UN ORARIO" : "03 // CONFERMA DETTAGLI"}</span>
+                <h2 className="bk-side-title">{dayLabel(day)}</h2>
                 <button
                   type="button"
                   className="bk-reset-day"
@@ -472,7 +434,6 @@ export function Booking() {
                   GUIDA
                 </button>
               </div>
-              <h2 className="bk-side-title">{dayLabel(day)}</h2>
             </div>
 
             {loading ? (
@@ -596,13 +557,35 @@ export function Booking() {
                   data-busy={submitting || undefined}
                 >
                   <span key={submitting ? "busy" : "idle"} className="bk-submit-label">
-                    {submitting ? "PRENOTAZIONE IN CORSO…" : `CONFERMA CONFRONTO · ${timeLabel(slot, tz)} →`}
+                    {submitting ? (
+                      "PRENOTAZIONE IN CORSO…"
+                    ) : (
+                      <>
+                        CONFERMA CONFRONTO · {timeLabel(slot, tz)}
+                        <ArrowIcon direction="right" variant="display" />
+                      </>
+                    )}
                   </span>
                 </button>
               </form>
             ) : null}
           </div>
         )}
+        </section>
+      </div>
+
+      {/* Fallback diretto con chiamata telefonica sotto le due colonne */}
+      <section className="bk-direct" aria-label="Contatto telefonico diretto">
+        <div className="bk-direct-copy">
+          <span className="bk-direct-k">CONTATTO DIRETTO</span>
+          <p className="bk-direct-text">
+            Non trovi un orario comodo o preferisci parlarne subito al telefono?
+          </p>
+        </div>
+        <a className="bk-direct-btn press" href={PHONE_NUMBER}>
+          CHIAMA ORA · {PHONE_DISPLAY}
+          <ArrowIcon direction="right" />
+        </a>
       </section>
     </div>
   );
