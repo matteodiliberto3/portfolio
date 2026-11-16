@@ -54,7 +54,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
     approach:
       "Attraverso verifiche mirate possiamo individuare le criticità di sistemi e accessi, distinguere ciò che è urgente da ciò che può aspettare e costruire una base concreta per gli interventi successivi.",
     cta: "Parliamo della tua attività",
-    schemaTitle: "PUNTO CRITICO",
+    schemaTitle: "DOVE SI FERMA IL LAVORO",
     schemaNodes: [
       {
         role: "OPERATIVITÀ",
@@ -62,7 +62,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
         detail: "Fatture, consegne e flussi interni dipendono dalla continuità del sistema.",
       },
       {
-        role: "DIPENDENZA",
+        role: "PUNTO CRITICO",
         label: "Account condivisi o accessi esterni",
         detail: "Credenziali deboli o permessi lasciati attivi a fornitori terzi.",
         highlighted: true,
@@ -73,7 +73,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
         detail: "Il problema tecnico diventa subito un blocco commerciale.",
       },
     ],
-    deliverableTitle: "COSA TI PORTI A CASA",
+    deliverableTitle: "COSA OTTIENI",
     deliverableHeadline: "Una direzione chiara, non gergo tecnico",
     deliverableSummary:
       "Un quadro ordinato delle criticità su applicazioni e accessi, distinguendo ciò che richiede azione immediata da ciò che può attendere.",
@@ -98,7 +98,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
     approach:
       "Con test mirati possiamo verificare le parti più sensibili del prodotto e fornire evidenze e indicazioni tecniche utilizzabili dal team di sviluppo.",
     cta: "Parliamo del tuo software",
-    schemaTitle: "PUNTO CRITICO",
+    schemaTitle: "DOVE IL PRODOTTO VIENE MESSO ALLA PROVA",
     schemaNodes: [
       {
         role: "FLUSSO ATTESO",
@@ -106,7 +106,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
         detail: "Le funzionalità rispondono regolarmente ai casi d'uso previsti.",
       },
       {
-        role: "DEVIAZIONE",
+        role: "PUNTO CRITICO",
         label: "Controlli di accesso e logica API",
         detail: "Richieste alterate o passaggi tra ruoli non previsti nel rilascio.",
         highlighted: true,
@@ -117,7 +117,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
         detail: "Un errore di autorizzazione può esporre risorse di altri clienti.",
       },
     ],
-    deliverableTitle: "COSA TI PORTI A CASA",
+    deliverableTitle: "COSA OTTIENI",
     deliverableHeadline: "Evidenze riproducibili per i dev",
     deliverableSummary:
       "Passi chiari su come un comportamento anomalo è stato verificato e indicazioni pratiche su cui il team di sviluppo può intervenire subito.",
@@ -140,7 +140,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
     approach:
       "L'obiettivo è fornire evidenze tecniche su sistemi e percorsi specifici, aiutando i team responsabili a comprendere meglio i rischi individuati.",
     cta: "Confrontiamoci",
-    schemaTitle: "PUNTO CRITICO",
+    schemaTitle: "DOVE NASCONO LE ZONE D'OMBRA",
     schemaNodes: [
       {
         role: "COMPONENTI ISOLATI",
@@ -148,7 +148,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
         detail: "Ogni area applica i propri controlli interni previsti dalle policy.",
       },
       {
-        role: "PUNTI DI CONTATTO",
+        role: "PUNTO CRITICO",
         label: "Scambi tra sedi, team e fornitori",
         detail: "Passaggi trasversali dove le responsabilità e le assunzioni cambiano.",
         highlighted: true,
@@ -159,7 +159,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
         detail: "Verifica mirata di ciò che sfugge all'osservazione del singolo modulo.",
       },
     ],
-    deliverableTitle: "COSA TI PORTI A CASA",
+    deliverableTitle: "COSA OTTIENI",
     deliverableHeadline: "Riscontri mirati sul perimetro concordato",
     deliverableSummary:
       "Evidenze tecniche circostanziate su percorsi e interazioni specifiche, a supporto dei team responsabili e delle priorità di intervento.",
