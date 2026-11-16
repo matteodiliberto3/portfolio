@@ -54,7 +54,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
     approach:
       "Attraverso verifiche mirate possiamo individuare le criticità di sistemi e accessi, distinguere ciò che è urgente da ciò che può aspettare e costruire una base concreta per gli interventi successivi.",
     cta: "Parliamo della tua attività",
-    schemaTitle: "DOVE SI FERMA IL LAVORO",
+    schemaTitle: "PUNTO CRITICO",
     schemaNodes: [
       {
         role: "OPERATIVITÀ",
@@ -98,7 +98,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
     approach:
       "Con test mirati possiamo verificare le parti più sensibili del prodotto e fornire evidenze e indicazioni tecniche utilizzabili dal team di sviluppo.",
     cta: "Parliamo del tuo software",
-    schemaTitle: "DOVE IL PRODOTTO VIENE MESSO ALLA PROVA",
+    schemaTitle: "PUNTO CRITICO",
     schemaNodes: [
       {
         role: "FLUSSO ATTESO",
@@ -140,7 +140,7 @@ export const BUYER_SEGMENTS: Record<BuyerSegmentKey, BuyerSegment> = {
     approach:
       "L'obiettivo è fornire evidenze tecniche su sistemi e percorsi specifici, aiutando i team responsabili a comprendere meglio i rischi individuati.",
     cta: "Confrontiamoci",
-    schemaTitle: "DOVE NASCONO LE ZONE D'OMBRA",
+    schemaTitle: "PUNTO CRITICO",
     schemaNodes: [
       {
         role: "COMPONENTI ISOLATI",

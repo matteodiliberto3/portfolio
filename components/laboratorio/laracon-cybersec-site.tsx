@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { type CSSProperties, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowIcon } from "@/components/cyber/arrow-icon";
 import { AsciiPortraitCanvas } from "@/components/laboratorio/ascii-portrait-canvas";
@@ -705,6 +705,7 @@ export function LaraconCybersecSite() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gridAutoRows: "1fr",
               gap: "10px",
             }}
           >
@@ -715,14 +716,17 @@ export function LaraconCybersecSite() {
               return (
                 <button
                   key={key}
+                  id={`home-buyer-tab-${key}`}
                   type="button"
                   role="tab"
                   aria-selected={isSelected}
+                  aria-controls="home-buyer-tabpanel"
                   className="cyber-home-tab"
                   onClick={() => setActiveBuyer(key)}
                   style={{
                     padding: "20px",
                     minHeight: "119px",
+                    height: "100%",
                     textAlign: "left",
                     background: isSelected ? seg.badgeColor : "#08080a",
                     color: isSelected ? selectedInk : PALETTE.ink,
@@ -750,24 +754,23 @@ export function LaraconCybersecSite() {
             })}
           </div>
 
-          {/* Scheda sintetica per la realtà selezionata */}
+          {/* Scheda sintetica ad altezza costante su tutti gli scenari */}
           <div
+            id="home-buyer-tabpanel"
             role="tabpanel"
+            aria-labelledby={`home-buyer-tab-${activeBuyer}`}
             style={{
               border: `1px solid ${buyer.badgeColor}`,
               background: "rgba(1, 1, 1, 0.94)",
-              padding: "clamp(32px, 5vw, 56px)",
               minHeight: "290px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              textAlign: "center",
-              gap: "28px",
+              display: "grid",
+              transition: "border-color 180ms ease",
             }}
           >
-            <h3
-              style={{
+            {(Object.keys(BUYER_SEGMENTS) as BuyerSegmentKey[]).map((key) => {
+              const seg = BUYER_SEGMENTS[key];
+              const isActive = key === activeBuyer;
+              const headlineStyle: CSSProperties = {
                 margin: 0,
                 fontFamily: DISPLAY_FONT,
                 fontSize: "clamp(1.7rem, 3.2vw, 2.5rem)",
@@ -775,50 +778,91 @@ export function LaraconCybersecSite() {
                 textTransform: "uppercase",
                 textWrap: "balance",
                 color: "#F4F3FA",
-              }}
-            >
-              {buyer.headline}
-            </h3>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
+              };
+              const ctaStyle: CSSProperties = {
+                display: "inline-flex",
                 alignItems: "center",
-                gap: "12px",
-              }}
-            >
-              <Link
-                href="/prenota"
-                className={`cyber-segment-solid ${buyer.solidButtonClass}`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "0.45em",
-                  minWidth: "min(100%, 304px)",
-                  padding: "14px 24px",
-                  minHeight: "48px",
-                  background: buyer.badgeColor,
-                  color: buyer.badgeColor === PALETTE.ink ? PALETTE.bg : "#ffffff",
-                  fontFamily: DISPLAY_FONT,
-                  fontSize: "1.25rem",
-                  lineHeight: 1,
-                  letterSpacing: "0.02em",
-                  textTransform: "uppercase",
-                  textDecoration: "none",
-                  borderRadius: 0,
-                }}
-              >
-                {buyer.cta}
-                <ArrowIcon direction="right" variant="display" />
-              </Link>
+                justifyContent: "center",
+                gap: "0.45em",
+                minWidth: "min(100%, 304px)",
+                padding: "14px 24px",
+                minHeight: "48px",
+                background: seg.badgeColor,
+                color: seg.badgeColor === PALETTE.ink ? PALETTE.bg : "#ffffff",
+                fontFamily: DISPLAY_FONT,
+                fontSize: "1.25rem",
+                lineHeight: 1,
+                letterSpacing: "0.02em",
+                textTransform: "uppercase",
+                textDecoration: "none",
+                borderRadius: 0,
+              };
 
-              <Link href={`/per-chi#${activeBuyer}`} className="cyber-home-deep-link">
-                Approfondisci: {buyer.shortLabel}
-                <ArrowIcon direction="right" />
-              </Link>
-            </div>
+              return (
+                <div
+                  key={key}
+                  aria-hidden={!isActive || undefined}
+                  style={{
+                    gridArea: "1 / 1",
+                    minWidth: 0,
+                    padding: "clamp(32px, 5vw, 56px)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textAlign: "center",
+                    gap: "28px",
+                    visibility: isActive ? "visible" : "hidden",
+                    pointerEvents: isActive ? "auto" : "none",
+                  }}
+                >
+                  {isActive ? (
+                    <h3 style={headlineStyle}>{seg.headline}</h3>
+                  ) : (
+                    <div style={headlineStyle}>{seg.headline}</div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "12px",
+                    }}
+                  >
+                    {isActive ? (
+                      <>
+                        <Link
+                          href="/prenota"
+                          className={`cyber-segment-solid ${seg.solidButtonClass}`}
+                          style={ctaStyle}
+                        >
+                          {seg.cta}
+                          <ArrowIcon direction="right" variant="display" />
+                        </Link>
+
+                        <Link href={`/per-chi#${key}`} className="cyber-home-deep-link">
+                          Approfondisci: {seg.shortLabel}
+                          <ArrowIcon direction="right" />
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <span style={ctaStyle}>
+                          {seg.cta}
+                          <ArrowIcon direction="right" variant="display" />
+                        </span>
+
+                        <span className="cyber-home-deep-link">
+                          Approfondisci: {seg.shortLabel}
+                          <ArrowIcon direction="right" />
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

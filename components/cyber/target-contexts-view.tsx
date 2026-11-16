@@ -17,12 +17,6 @@ import {
   SANS_FONT,
 } from "@/components/cyber/dither-primitives";
 
-const RISK_BADGE_MAP: Record<BuyerSegmentKey, string> = {
-  pmi: "PUNTO DI ARRESTO",
-  startup: "PERCORSO CRITICO",
-  enterprise: "INTERAZIONE",
-};
-
 function isBuyerSegmentKey(value: string): value is BuyerSegmentKey {
   return (BUYER_SEGMENT_KEYS as readonly string[]).includes(value);
 }
@@ -39,10 +33,8 @@ function prefersReducedMotion(): boolean {
 }
 
 function SegmentSchemaPanel({
-  segmentKey,
   segment,
 }: {
-  segmentKey: BuyerSegmentKey;
   segment: BuyerSegment;
 }) {
   return (
@@ -108,30 +100,14 @@ function SegmentSchemaPanel({
             >
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "8px",
-                  flexWrap: "wrap",
                   fontFamily: MONO_FONT,
                   fontSize: "11px",
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
+                  color: node.highlighted ? segment.accentInk : PALETTE.muted,
                 }}
               >
-                <span style={{ color: node.highlighted ? segment.accentInk : PALETTE.muted }}>
-                  {node.role}
-                </span>
-                {node.highlighted ? (
-                  <span
-                    style={{
-                      color: segment.accentInk,
-                      fontWeight: 700,
-                    }}
-                  >
-                    [{RISK_BADGE_MAP[segmentKey]}]
-                  </span>
-                ) : null}
+                {node.role}
               </div>
 
               <div
@@ -670,7 +646,7 @@ export function TargetContextsView() {
               </div>
 
               {/* Colonna DX: Schema del meccanismo di rischio + Cosa ti porti a casa */}
-              <SegmentSchemaPanel segmentKey={revealedKey} segment={revealedSegment} />
+              <SegmentSchemaPanel segment={revealedSegment} />
             </article>
           ) : null}
         </div>
