@@ -1,10 +1,18 @@
 "use client";
 
-import { type CSSProperties, type KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { ArrowIcon } from "@/components/cyber/arrow-icon";
 import {
-  BUYER_SEGMENTS,
+  buildBuyerSegments,
   BUYER_SEGMENT_KEYS,
   type BuyerSegment,
   type BuyerSegmentKey,
@@ -16,6 +24,7 @@ import {
   PixelDitherCanvas,
   SANS_FONT,
 } from "@/components/cyber/dither-primitives";
+import { useI18n } from "@/components/i18n/locale-provider";
 
 function isBuyerSegmentKey(value: string): value is BuyerSegmentKey {
   return (BUYER_SEGMENT_KEYS as readonly string[]).includes(value);
@@ -34,12 +43,14 @@ function prefersReducedMotion(): boolean {
 
 function SegmentSchemaPanel({
   segment,
+  asideAriaLabel,
 }: {
   segment: BuyerSegment;
+  asideAriaLabel: string;
 }) {
   return (
     <aside
-      aria-label={`Sintesi visiva e risultato per ${segment.label}`}
+      aria-label={asideAriaLabel}
       className="cyber-segment-aside"
       style={{
         background: PALETTE.surface,
@@ -77,7 +88,7 @@ function SegmentSchemaPanel({
       >
         {segment.schemaNodes.map((node, index) => (
           <li
-            key={node.role}
+            key={index}
             className="cyber-schema-step"
             style={
               {
@@ -202,6 +213,8 @@ function SegmentSchemaPanel({
 }
 
 export function TargetContextsView() {
+  const { t } = useI18n();
+  const segments = useMemo(() => buildBuyerSegments(t.segments), [t.segments]);
   const [activeKey, setActiveKey] = useState<BuyerSegmentKey | null>(null);
   const [revealedKey, setRevealedKey] = useState<BuyerSegmentKey | null>(null);
   const [revealSeq, setRevealSeq] = useState(0);
@@ -357,7 +370,7 @@ export function TargetContextsView() {
     });
   };
 
-  const revealedSegment: BuyerSegment | null = revealedKey ? BUYER_SEGMENTS[revealedKey] : null;
+  const revealedSegment: BuyerSegment | null = revealedKey ? segments[revealedKey] : null;
 
   return (
     <div
@@ -413,9 +426,9 @@ export function TargetContextsView() {
                 color: PALETTE.inkStrong,
               }}
             >
-              IL RISCHIO NON GUARDA
+              {t.perChi.headingLine1}
               <br />
-              LE DIMENSIONI DELLA TUA AZIENDA.
+              {t.perChi.headingLine2}
             </h1>
 
             <p
@@ -428,7 +441,7 @@ export function TargetContextsView() {
                 color: PALETTE.inkSecondary,
               }}
             >
-              Tre scenari operativi diversi, stessi rischi reali ma priorit&agrave; differenti. Scegli il tuo contesto per vedere dove si nascondono le criticit&agrave; e cosa ottieni dalla verifica.
+              {t.perChi.intro}
             </p>
           </header>
 
@@ -436,12 +449,12 @@ export function TargetContextsView() {
           <div style={{ paddingBottom: "clamp(4px, 2vh, 20px)" }}>
             <div
               role="tablist"
-              aria-label="Seleziona il contesto aziendale"
+              aria-label={t.perChi.tabsAriaLabel}
               className="cyber-chapter-nav"
               onKeyDown={handleTabKeyDown}
             >
               {BUYER_SEGMENT_KEYS.map((key, index) => {
-                const seg = BUYER_SEGMENTS[key];
+                const seg = segments[key];
                 const isSelected = activeKey === key;
 
                 return (
@@ -481,7 +494,7 @@ export function TargetContextsView() {
         ref={stageRef}
         id="per-chi-stage"
         aria-live="polite"
-        aria-label="Dettaglio dello scenario selezionato"
+        aria-label={t.perChi.stageAriaLabel}
         style={{
           position: "relative",
           minHeight: "calc(100svh - 54px)",
@@ -591,9 +604,9 @@ export function TargetContextsView() {
                     gap: "14px",
                   }}
                 >
-                  {revealedSegment.intro.map((paragraph) => (
+                  {revealedSegment.intro.map((paragraph, index) => (
                     <p
-                      key={paragraph}
+                      key={index}
                       style={{
                         margin: 0,
                         fontFamily: SANS_FONT,
@@ -645,8 +658,11 @@ export function TargetContextsView() {
                 </div>
               </div>
 
-              {/* Colonna DX: Schema del meccanismo di rischio + Cosa ti porti a casa */}
-              <SegmentSchemaPanel segment={revealedSegment} />
+              {/* Colonna DX: Schema del meccanismo di rischio + Cosa ottieni */}
+              <SegmentSchemaPanel
+                segment={revealedSegment}
+                asideAriaLabel={`${t.perChi.asideAriaLabelPrefix} ${revealedSegment.label}`}
+              />
             </article>
           ) : null}
         </div>
@@ -674,7 +690,7 @@ export function TargetContextsView() {
             className="cyber-ghost-white cyber-perchi-footer-left"
           >
             <ArrowIcon direction="left" />
-            Torna alla home
+            {t.perChi.homeLink}
           </Link>
 
           <button
@@ -682,14 +698,14 @@ export function TargetContextsView() {
             onClick={scrollBackToChooser}
             className="cyber-ghost-white cyber-perchi-footer-center"
           >
-            Torna su ↑
+            {t.perChi.topLink}
           </button>
 
           <Link
             href="/metodologia"
             className="cyber-ghost-white cyber-perchi-footer-right"
           >
-            Scopri il metodo
+            {t.perChi.methodLink}
             <ArrowIcon direction="right" />
           </Link>
         </div>

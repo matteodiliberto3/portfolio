@@ -1,10 +1,13 @@
+import { CustomScrollbar } from "@/components/cyber/custom-scrollbar";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { JsonLd } from "@/components/json-ld";
 import { ViewTransitionBridge } from "@/components/page-link";
+import { getDictionary, OG_LOCALE } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n/server";
 import {
   graphJsonLd,
   personJsonLd,
   serviceJsonLd,
-  siteDescription,
   siteName,
   siteUrl,
   websiteJsonLd,
@@ -38,52 +41,66 @@ const antonio = Antonio({
 
 const indexable = process.env.VERCEL_ENV !== "preview";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: `${siteName} — Cybersecurity Engineer & Penetration Testing`,
-    template: `%s — ${siteName}`,
-  },
-  description: siteDescription,
-  applicationName: siteName,
-  authors: [{ name: siteName, url: siteUrl }],
-  creator: siteName,
-  category: "portfolio",
-  robots: indexable
-    ? { index: true, follow: true }
-    : { index: false, follow: false },
-  openGraph: {
-    type: "website",
-    locale: "it_IT",
-    url: siteUrl,
-    siteName,
-    title: `${siteName} — Cybersecurity Engineer & Penetration Testing`,
-    description: siteDescription,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${siteName} — Cybersecurity Engineer & Penetration Testing`,
-    description: siteDescription,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const t = getDictionary(locale);
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: t.metadata.siteTitleDefault,
+      template: t.metadata.siteTitleTemplate,
+    },
+    description: t.metadata.siteDescription,
+    applicationName: siteName,
+    authors: [{ name: siteName, url: siteUrl }],
+    creator: siteName,
+    category: "portfolio",
+    robots: indexable
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
+    openGraph: {
+      type: "website",
+      locale: OG_LOCALE[locale],
+      url: siteUrl,
+      siteName,
+      title: t.metadata.siteTitleDefault,
+      description: t.metadata.siteDescription,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t.metadata.siteTitleDefault,
+      description: t.metadata.siteDescription,
+    },
+  };
+}
 
 export const viewport = {
   themeColor: "#e6e1d8",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getRequestLocale();
+
   return (
     <html
-      lang="it"
+      lang={locale}
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${antonio.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <JsonLd
-          data={graphJsonLd([personJsonLd(), websiteJsonLd(), serviceJsonLd()])}
+          data={graphJsonLd([
+            personJsonLd(locale),
+            websiteJsonLd(locale),
+            serviceJsonLd(locale),
+          ])}
         />
-        <ViewTransitionBridge />
-        {children}
+        <LocaleProvider initialLocale={locale}>
+          <ViewTransitionBridge />
+          <CustomScrollbar />
+          {children}
+        </LocaleProvider>
         <Analytics />
       </body>
     </html>

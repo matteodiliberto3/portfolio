@@ -3,6 +3,8 @@ import { isSlotFree } from "@/lib/booking/availability";
 import { createCall, isConfigured } from "@/lib/booking/google";
 import { allow, clientKey } from "@/lib/booking/rate-limit";
 import { dayOf, rules } from "@/lib/booking/rules";
+import { getDictionary, isLocale } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ type Body = {
   name?: unknown;
   email?: unknown;
   topic?: unknown;
+  locale?: unknown;
   /** honeypot: real users never fill it */
   website?: unknown;
 };
@@ -23,16 +26,30 @@ function str(v: unknown, max: number) {
 
 /** POST /api/prenota → books one slot on the calendar and invites the guest. */
 export async function POST(req: NextRequest) {
+  const requestLocale = await getRequestLocale();
+
   if (!allow(`book:${clientKey(req)}`, 5, 60 * 60_000)) {
-    return Response.json({ error: "Troppe prenotazioni da questo indirizzo." }, { status: 429 });
+    const errCopy = getDictionary(requestLocale).booking.apiErrors;
+    return Response.json(
+      { error: errCopy.rateLimitBook, errorCode: "rateLimitBook" },
+      { status: 429 },
+    );
   }
 
   let body: Body;
   try {
     body = (await req.json()) as Body;
   } catch {
-    return Response.json({ error: "Richiesta non leggibile." }, { status: 400 });
+    const errCopy = getDictionary(requestLocale).booking.apiErrors;
+    return Response.json(
+      { error: errCopy.badBody, errorCode: "badBody" },
+      { status: 400 },
+    );
   }
+
+  const locale = isLocale(body.locale) ? body.locale : requestLocale;
+  const bookingCopy = getDictionary(locale).booking;
+  const errCopy = bookingCopy.apiErrors;
 
   if (str(body.website, 10)) return Response.json({ ok: true }); // bot fed, nothing created
 
@@ -42,16 +59,29 @@ export async function POST(req: NextRequest) {
   const topic = str(body.topic, 600);
 
   if (!Number.isFinite(startMs) || startMs % 60_000 !== 0) {
-    return Response.json({ error: "Orario non valido." }, { status: 400 });
+    return Response.json(
+      { error: errCopy.invalidSlot, errorCode: "invalidSlot" },
+      { status: 400 },
+    );
   }
-  if (name.length < 2) return Response.json({ error: "Manca il nome." }, { status: 400 });
-  if (!EMAIL.test(email)) return Response.json({ error: "Email non valida." }, { status: 400 });
+  if (name.length < 2) {
+    return Response.json(
+      { error: errCopy.missingName, errorCode: "missingName" },
+      { status: 400 },
+    );
+  }
+  if (!EMAIL.test(email)) {
+    return Response.json(
+      { error: errCopy.invalidEmail, errorCode: "invalidEmail" },
+      { status: 400 },
+    );
+  }
 
   const day = dayOf(startMs);
   try {
     if (!(await isSlotFree(day, startMs))) {
       return Response.json(
-        { error: "Questo orario è appena stato preso. Scegline un altro." },
+        { error: errCopy.slotTaken, errorCode: "slotTaken" },
         { status: 409 },
       );
     }
@@ -59,10 +89,21 @@ export async function POST(req: NextRequest) {
     if (!isConfigured()) {
       return Response.json({ ok: true, demo: true, start: startMs, end: endMs, meet: null });
     }
-    const created = await createCall({ startMs, endMs, name, email, topic });
+    const created = await createCall({
+      startMs,
+      endMs,
+      name,
+      email,
+      topic,
+      summaryPrefix: bookingCopy.calendarInvite.summaryPrefix,
+      topicPrefix: bookingCopy.calendarInvite.topicPrefix,
+    });
     return Response.json({ ok: true, demo: false, start: startMs, end: endMs, meet: created.meet });
   } catch (err) {
     console.error("[prenota]", err);
-    return Response.json({ error: "Non sono riuscito a scrivere sul calendario." }, { status: 502 });
+    return Response.json(
+      { error: errCopy.calWriteFailed, errorCode: "calWriteFailed" },
+      { status: 502 },
+    );
   }
 }

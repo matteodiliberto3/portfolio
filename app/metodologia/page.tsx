@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
 import { MethodologyView } from "@/components/cyber/methodology-view";
 import { SiteHeader } from "@/components/cyber/site-header";
+import { getDictionary } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Metodo",
-  description:
-    "Non puoi proteggere ciò che non conosci: Deconstruct, Exploit, Remediate. Il metodo in tre fasi per individuare e risolvere i rischi di sicurezza.",
-  alternates: { canonical: "/metodologia" },
-  openGraph: {
-    title: "Metodo — Matteo Di Liberto",
-    description:
-      "Non puoi proteggere ciò che non conosci: Deconstruct, Exploit, Remediate. Il metodo in tre fasi per individuare e risolvere i rischi di sicurezza.",
-    url: "/metodologia",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const page = getDictionary(locale).metadata.pages.metodologia;
+
+  return {
+    title: page.title,
+    description: page.description,
+    alternates: { canonical: "/metodologia" },
+    openGraph: {
+      title: `${page.title} — Matteo Di Liberto`,
+      description: page.description,
+      url: "/metodologia",
+    },
+  };
+}
 
 export default function MethodologyPage() {
   return (

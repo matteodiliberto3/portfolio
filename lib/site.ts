@@ -1,3 +1,5 @@
+import { getDictionary, INTL_LOCALE, type Locale } from "@/lib/i18n";
+
 /** Canonical origin. www redirects here. */
 export const siteUrl = "https://matteodiliberto.it";
 
@@ -10,47 +12,22 @@ export const githubUrl = "https://github.com/matteodiliberto3";
 
 export const jobTitle = "Cybersecurity Engineer · Penetration Testing & Security Advisory";
 
-export const faqs = [
-  {
-    question: "Chi è Matteo Di Liberto?",
-    answer:
-      "Ingegnere informatico specializzato in Cybersecurity, MLOps e architetture resilienti. Conduco penetration test manuali, revisioni del codice sorgente e audit di sicurezza per aziende e team di sviluppo che trattano dati e flussi critici.",
-  },
-  {
-    question: "Quali servizi di Cybersecurity offri?",
-    answer:
-      "Penetration testing per applicazioni web e API (OWASP Top 10 e fallacie di logica applicativa), audit del codice sorgente e pipeline DevSecOps, hardening di infrastrutture cloud/container, e security assessment per sistemi e modelli AI/ML.",
-  },
-  {
-    question: "In cosa si differenzia la tua analisi da uno scanner automatico?",
-    answer:
-      "Gli scanner automatici producono rumore, falsi positivi e non comprendono la logica di business. Io conduco test manuali per simulare un attaccante reale, fornendo per ogni falla un proof-of-concept riproducibile e il codice corretto per risolverla.",
-  },
-  {
-    question: "Cosa viene rilasciato al termine di un security assessment?",
-    answer:
-      "Un report esecutivo con matrice di rischio per il management e un report tecnico dettagliato per gli sviluppatori, completo di step di riproduzione, patch consigliate e una sessione di ri-test inclusa per validare le correzioni.",
-  },
-  {
-    question: "Come si avvia una collaborazione?",
-    answer:
-      "Con una chiamata di 30 minuti protetta da NDA per definire perimetro d'ingaggio, asset critici e vincoli operativi. Si prenota direttamente online scegliendo uno slot disponibile.",
-  },
-] as const;
+export const faqs = getDictionary("it").jsonLd.faqs;
 
 export function absoluteUrl(path = "/") {
   return new URL(path, siteUrl).toString();
 }
 
-export function personJsonLd() {
+export function personJsonLd(locale: Locale = "it") {
+  const t = getDictionary(locale);
   return {
     "@type": "Person",
     "@id": `${siteUrl}/#person`,
     name: siteName,
     url: siteUrl,
     image: absoluteUrl("/portrait.jpg"),
-    jobTitle,
-    description: siteDescription,
+    jobTitle: t.metadata.jobTitle,
+    description: t.metadata.siteDescription,
     address: {
       "@type": "PostalAddress",
       addressLocality: "Varese",
@@ -70,71 +47,52 @@ export function personJsonLd() {
   };
 }
 
-export function websiteJsonLd() {
+export function websiteJsonLd(locale: Locale = "it") {
+  const t = getDictionary(locale);
   return {
     "@type": "WebSite",
     "@id": `${siteUrl}/#website`,
     url: siteUrl,
     name: siteName,
-    description: siteDescription,
-    inLanguage: "it-IT",
+    description: t.jsonLd.websiteDescription,
+    inLanguage: INTL_LOCALE[locale],
     publisher: { "@id": `${siteUrl}/#person` },
   };
 }
 
-export function serviceJsonLd() {
+export function serviceJsonLd(locale: Locale = "it") {
+  const t = getDictionary(locale);
   return {
     "@type": "ProfessionalService",
     "@id": `${siteUrl}/#service`,
     name: siteName,
     url: siteUrl,
     image: absoluteUrl("/portrait.jpg"),
-    description:
-      "Servizi di Cybersecurity ad alta intensità tecnica: Penetration Testing, Audit del codice sorgente, DevSecOps e messa in sicurezza di infrastrutture cloud.",
-    areaServed: { "@type": "Country", name: "Italia" },
+    description: t.jsonLd.serviceDescription,
+    areaServed: { "@type": "Country", name: t.metadata.countryName },
     address: {
       "@type": "PostalAddress",
       addressLocality: "Varese",
       addressCountry: "IT",
     },
     founder: { "@id": `${siteUrl}/#person` },
-    makesOffer: [
-      {
-        "@type": "Offer",
-        itemOffered: {
-          "@type": "Service",
-          name: "Penetration Testing Web & API",
-          description:
-            "Test d'intrusione manuale mirato a fallacie di logica di business, bypass di autenticazione e vulnerabilità OWASP.",
-        },
+    makesOffer: t.jsonLd.offers.map((offer) => ({
+      "@type": "Offer",
+      itemOffered: {
+        "@type": "Service",
+        name: offer.name,
+        description: offer.description,
       },
-      {
-        "@type": "Offer",
-        itemOffered: {
-          "@type": "Service",
-          name: "Audit del Codice & DevSecOps",
-          description:
-            "Revisione del sorgente, hardening delle dipendenze e integrazione di pipeline CI/CD con scansione e proof automatici.",
-        },
-      },
-      {
-        "@type": "Offer",
-        itemOffered: {
-          "@type": "Service",
-          name: "Hardening Cloud & MLOps Security",
-          description:
-            "Isolamento ambienti containerizzati, policy zero-trust IAM e protezione da prompt injection su pipeline AI.",
-        },
-      },
-    ],
+    })),
   };
 }
 
-export function faqJsonLd() {
+export function faqJsonLd(locale: Locale = "it") {
+  const t = getDictionary(locale);
   return {
     "@type": "FAQPage",
     "@id": `${siteUrl}/#faq`,
-    mainEntity: faqs.map((item) => ({
+    mainEntity: t.jsonLd.faqs.map((item) => ({
       "@type": "Question",
       name: item.question,
       acceptedAnswer: { "@type": "Answer", text: item.answer },

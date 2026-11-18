@@ -1,34 +1,35 @@
 import type { Metadata } from "next";
-import { BackHome } from "@/components/back-home";
 import { Booking } from "@/components/booking/booking";
-import { ArrowIcon } from "@/components/cyber/arrow-icon";
+import { BookingTopBar } from "@/components/booking/booking-topbar";
+import { getDictionary } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Prenota un primo confronto",
-  description:
-    "Trenta minuti su Google Meet con Matteo Di Liberto per valutare la situazione della tua azienda, i rischi concreti e i primi passi di verifica.",
-  alternates: { canonical: "/prenota" },
-  openGraph: {
-    title: "Prenota un primo confronto — Matteo Di Liberto",
-    description:
-      "Trenta minuti su Google Meet con Matteo Di Liberto per valutare la situazione della tua azienda, i rischi concreti e i primi passi di verifica.",
-    url: "/prenota",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const page = getDictionary(locale).metadata.pages.prenota;
 
-export default function BookingPage() {
+  return {
+    title: page.title,
+    description: page.description,
+    alternates: { canonical: "/prenota" },
+    openGraph: {
+      title: `${page.title} — Matteo Di Liberto`,
+      description: page.description,
+      url: "/prenota",
+    },
+  };
+}
+
+export default async function BookingPage() {
+  const locale = await getRequestLocale();
+  const t = getDictionary(locale);
+
   return (
     <main className="bk-page">
-      <header className="bk-top">
-        <BackHome className="bk-back press">
-          <ArrowIcon direction="left" />
-          TORNA AL SITO
-        </BackHome>
-        <span className="bk-top-meta">GOOGLE MEET · 30 MIN · SOLO SU APPUNTAMENTO</span>
-      </header>
+      <BookingTopBar />
 
       <div className="bk-shell">
-        <h1 className="sr-only">Prenota un primo confronto</h1>
+        <h1 className="sr-only">{t.booking.pageTitle}</h1>
 
         <div className="bk-enter">
           <Booking />

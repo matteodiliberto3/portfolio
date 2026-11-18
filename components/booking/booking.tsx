@@ -3,6 +3,8 @@
 import { track } from "@vercel/analytics";
 import Link from "next/link";
 import { ArrowIcon } from "@/components/cyber/arrow-icon";
+import { useI18n } from "@/components/i18n/locale-provider";
+import type { Dictionary } from "@/lib/i18n";
 import {
   useCallback,
   useEffect,
@@ -14,7 +16,6 @@ import {
 } from "react";
 
 const PHONE_NUMBER = "tel:+393711500055";
-const PHONE_DISPLAY = "+39 371 150 0055";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type Availability = {
@@ -27,31 +28,10 @@ type Availability = {
 
 type Booked = { start: number; end: number; meet: string | null; demo: boolean };
 
-const WEEKDAYS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
-
-const STEPS = [
-  { num: "01", label: "GIORNO" },
-  { num: "02", label: "ORARIO" },
-  { num: "03", label: "DETTAGLI" },
-] as const;
-
-const HOW_IT_WORKS = [
-  {
-    code: "01",
-    title: "Inquadriamo il contesto",
-    body: "Mi racconti quali software, accessi o applicazioni sostengono la tua attività e che cosa vuoi proteggere.",
-  },
-  {
-    code: "02",
-    title: "Distinguiamo le priorità",
-    body: "Capiamo insieme se ci sono rischi concreti da verificare subito o aspetti che possono aspettare.",
-  },
-  {
-    code: "03",
-    title: "Nessun impegno commerciale",
-    body: "Esci dalla chiamata con indicazioni chiare sui possibili primi passi, senza paroloni tecnici né pressioni.",
-  },
-] as const;
+type SubmitErrorState =
+  | { code: keyof Dictionary["booking"]["apiErrors"] }
+  | { code: "connection" }
+  | { code: "generic"; message?: string };
 
 function ym(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -74,25 +54,32 @@ function monthCells(month: string) {
   return cells;
 }
 
-const fmtMonth = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" });
-const fmtDayLong = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" });
-
-function monthLabel(month: string) {
+function monthLabel(month: string, intlLocale: string) {
   const [y, m] = month.split("-").map(Number);
-  return fmtMonth.format(new Date(y, m - 1, 1));
+  return new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric" }).format(
+    new Date(y, m - 1, 1),
+  );
 }
 
-function dayLabel(day: string) {
+function dayLabel(day: string, intlLocale: string) {
   const [y, m, d] = day.split("-").map(Number);
-  return fmtDayLong.format(new Date(Date.UTC(y, m - 1, d, 12)));
+  return new Intl.DateTimeFormat(intlLocale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(Date.UTC(y, m - 1, d, 12)));
 }
 
-function timeLabel(ms: number, timeZone: string) {
-  return new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit", timeZone }).format(ms);
+function timeLabel(ms: number, timeZone: string, intlLocale: string) {
+  return new Intl.DateTimeFormat(intlLocale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone,
+  }).format(ms);
 }
 
-function dayLabelAt(ms: number, timeZone: string) {
-  return new Intl.DateTimeFormat("it-IT", {
+function dayLabelAt(ms: number, timeZone: string, intlLocale: string) {
+  return new Intl.DateTimeFormat(intlLocale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -108,10 +95,13 @@ function normalizeEmail(raw: string) {
 }
 
 export function Booking() {
+  const { locale, intlLocale, t } = useI18n();
+  const b = t.booking;
+
   const [month, setMonth] = useState(() => ym(new Date()));
   const [dir, setDir] = useState<1 | -1>(1);
   const [cache, setCache] = useState<Record<string, Availability>>({});
-  const [failed, setFailed] = useState<Record<string, string>>({});
+  const [failed, setFailed] = useState<Record<string, true>>({});
   const inflight = useRef(new Set<string>());
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<number | null>(null);
@@ -121,7 +111,7 @@ export function Booking() {
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<SubmitErrorState | null>(null);
   const [booked, setBooked] = useState<Booked | null>(null);
 
   const gridRef = useRef<HTMLDivElement>(null);
@@ -130,7 +120,7 @@ export function Booking() {
   const emailInputRef = useRef<HTMLInputElement>(null);
 
   const data = cache[month];
-  const loadError = failed[month] ?? null;
+  const loadError = Boolean(failed[month]);
   const loading = !data && !loadError;
 
   // Fetch a month once; results stay cached so going back is instant.
@@ -143,7 +133,7 @@ export function Booking() {
         return (await r.json()) as Availability;
       })
       .then((a) => setCache((c) => ({ ...c, [month]: a })))
-      .catch(() => setFailed((f) => ({ ...f, [month]: "Non riesco a leggere il calendario." })))
+      .catch(() => setFailed((f) => ({ ...f, [month]: true })))
       .finally(() => inflight.current.delete(month));
   }, [month, cache, failed]);
 
@@ -173,7 +163,9 @@ export function Booking() {
     setSubmitError(null);
     setSubmitAttempted(false);
     if (window.matchMedia("(max-width: 960px)").matches) {
-      requestAnimationFrame(() => sideRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      requestAnimationFrame(() =>
+        sideRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
     }
   };
 
@@ -188,21 +180,30 @@ export function Booking() {
     const buttons = Array.from(
       gridRef.current?.querySelectorAll<HTMLButtonElement>("button[data-day]:not(:disabled)") ?? [],
     );
-    const idx = buttons.findIndex((b) => b.dataset.day === current);
-    const target = buttons[Math.min(buttons.length - 1, Math.max(0, idx + Math.sign(step) * (Math.abs(step) === 7 ? 5 : 1)))];
+    const idx = buttons.findIndex((btn) => btn.dataset.day === current);
+    const target =
+      buttons[
+        Math.min(
+          buttons.length - 1,
+          Math.max(0, idx + Math.sign(step) * (Math.abs(step) === 7 ? 5 : 1)),
+        )
+      ];
     target?.focus();
   }, []);
 
   const normalizedName = name.trim();
   const normalizedEmail = normalizeEmail(email);
   const nameError =
-    (touched.name || submitAttempted) && normalizedName.length < 2
-      ? "Inserisci almeno 2 caratteri per il nome."
-      : null;
+    (touched.name || submitAttempted) && normalizedName.length < 2 ? b.nameError : null;
   const emailError =
-    (touched.email || submitAttempted) && !EMAIL_RE.test(normalizedEmail)
-      ? "Inserisci un indirizzo email valido (es. nome@azienda.it)."
-      : null;
+    (touched.email || submitAttempted) && !EMAIL_RE.test(normalizedEmail) ? b.emailError : null;
+
+  const resolvedSubmitError = useMemo(() => {
+    if (!submitError) return null;
+    if (submitError.code === "connection") return b.connectionError;
+    if (submitError.code === "generic") return submitError.message || b.genericError;
+    return b.apiErrors[submitError.code] ?? b.genericError;
+  }, [submitError, b]);
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -230,12 +231,21 @@ export function Booking() {
           name: normalizedName,
           email: normalizedEmail,
           topic: topic.trim(),
+          locale,
           website: form.get("website"),
         }),
       });
-      const json = (await r.json()) as Partial<Booked> & { error?: string; ok?: boolean };
+      const json = (await r.json()) as Partial<Booked> & {
+        error?: string;
+        errorCode?: keyof Dictionary["booking"]["apiErrors"];
+        ok?: boolean;
+      };
       if (!r.ok || !json.ok) {
-        setSubmitError(json.error ?? "Qualcosa è andato storto.");
+        if (json.errorCode && json.errorCode in b.apiErrors) {
+          setSubmitError({ code: json.errorCode });
+        } else {
+          setSubmitError({ code: "generic", message: json.error });
+        }
         if (r.status === 409) {
           setCache((c) => {
             const next = { ...c };
@@ -246,10 +256,15 @@ export function Booking() {
         }
         return;
       }
-      setBooked({ start: json.start!, end: json.end!, meet: json.meet ?? null, demo: Boolean(json.demo) });
+      setBooked({
+        start: json.start ?? slot,
+        end: json.end ?? slot + 30 * 60_000,
+        meet: json.meet ?? null,
+        demo: Boolean(json.demo),
+      });
       track("prenota_confermata", { demo: Boolean(json.demo) });
     } catch {
-      setSubmitError("Connessione persa. Riprova.");
+      setSubmitError({ code: "connection" });
     } finally {
       setSubmitting(false);
     }
@@ -262,26 +277,26 @@ export function Booking() {
   if (booked) {
     return (
       <section className="bk-done" aria-live="polite">
-        <span className="bk-done-badge">PRENOTAZIONE CONFERMATA</span>
+        <span className="bk-done-badge">{b.confirmedBadge}</span>
         <h2 className="bk-done-title">
-          {dayLabelAt(booked.start, tz)}
+          {dayLabelAt(booked.start, tz, intlLocale)}
           <br />
-          alle {timeLabel(booked.start, tz)}
+          {b.confirmedTimePrefix} {timeLabel(booked.start, tz, intlLocale)}
         </h2>
         <p className="bk-done-copy">
           {booked.demo
-            ? "Modalità di prova: il calendario non è collegato, nessun evento è stato creato."
-            : `Ti ho mandato l’invito a ${normalizedEmail || email}. Dentro trovi già il link per Google Meet.`}
+            ? b.confirmedDemoNote
+            : `${b.confirmedLivePrefix}${normalizedEmail || email}${b.confirmedLiveSuffix}`}
         </p>
         <div className="bk-done-actions">
           {booked.meet ? (
             <a className="bk-done-primary press" href={booked.meet} target="_blank" rel="noreferrer">
-              APRI LINK GOOGLE MEET
+              {b.openMeet}
               <ArrowIcon direction="right" variant="display" />
             </a>
           ) : null}
           <Link className={booked.meet ? "bk-done-secondary press" : "bk-done-primary press"} href="/">
-            TORNA AL SITO
+            {b.backToSiteDone}
             <ArrowIcon direction="right" variant="display" />
           </Link>
         </div>
@@ -293,33 +308,33 @@ export function Booking() {
     <div className="bk-layout">
       <div className="bk">
         {/* ------- colonna sinistra: calendario ------- */}
-        <section className="bk-cal" aria-label="Scegli un giorno">
+        <section className="bk-cal" aria-label={b.calAriaLabel}>
           <header className="bk-cal-head">
             <button
               type="button"
               className="bk-nav press"
               onClick={() => go(-1)}
               disabled={!canPrev}
-              aria-label="Mese precedente"
+              aria-label={b.prevMonth}
             >
               <ArrowIcon direction="left" variant="icon" />
             </button>
             <h2 className="bk-month" key={month} data-dir={dir}>
-              {monthLabel(month)}
+              {monthLabel(month, intlLocale)}
             </h2>
             <button
               type="button"
               className="bk-nav press"
               onClick={() => go(1)}
               disabled={!canNext}
-              aria-label="Mese successivo"
+              aria-label={b.nextMonth}
             >
               <ArrowIcon direction="right" variant="icon" />
             </button>
           </header>
 
           <div className="bk-weekdays" aria-hidden>
-            {WEEKDAYS.map((w) => (
+            {b.weekDays.map((w) => (
               <span key={w}>{w}</span>
             ))}
           </div>
@@ -354,7 +369,7 @@ export function Booking() {
                   data-day={d}
                   data-state={state}
                   aria-pressed={selected}
-                  aria-label={`${dayLabel(d)}${state === "full" ? ", nessun orario disponibile" : ""}`}
+                  aria-label={`${dayLabel(d, intlLocale)}${state === "full" ? `, ${b.dayFullSuffix}` : ""}`}
                   disabled={state !== "open"}
                   onClick={() => pickDay(d)}
                 >
@@ -367,223 +382,220 @@ export function Booking() {
 
           {loadError ? (
             <div className="bk-cal-error" role="alert">
-              <span>{loadError}</span>
+              <span>{b.fetchError}</span>
               <button type="button" className="bk-retry" onClick={retryMonth}>
-                RIPROVA
+                {b.retry}
               </button>
             </div>
           ) : null}
         </section>
 
         {/* ------- colonna destra: scheda iniziale / orari / form ------- */}
-      <section ref={sideRef} className="bk-side" data-step={activeStep}>
-        <ol className="bk-steps" aria-label="Avanzamento prenotazione">
-          {STEPS.map((s, idx) => {
-            const num = idx + 1;
-            const status = num < activeStep ? "done" : num === activeStep ? "active" : "todo";
-            return (
-              <li
-                key={s.num}
-                className="bk-step"
-                data-status={status}
-                aria-current={status === "active" ? "step" : undefined}
-              >
-                <span className="bk-step-code">{status === "done" ? "✓" : s.num}</span>
-                <span className="bk-step-name">{s.label}</span>
-              </li>
-            );
-          })}
-        </ol>
-
-        {!day ? (
-          <div key="how-it-works" className="bk-panel bk-panel-guide">
-            <div className="bk-side-head">
-              <h2 className="bk-side-title">COME FUNZIONA IL CONFRONTO</h2>
-            </div>
-
-            <div className="bk-guide">
-              {HOW_IT_WORKS.map((item) => (
-                <div key={item.code} className="bk-guide-item">
-                  <div className="bk-guide-head">
-                    <span className="bk-guide-num">{item.code}</span>
-                    <strong className="bk-guide-title">{item.title}</strong>
-                  </div>
-                  <p className="bk-guide-body">{item.body}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="bk-guide-foot">
-              ← SCEGLI UN GIORNO DISPONIBILE SUL CALENDARIO PER VEDERE GLI ORARI SU GOOGLE MEET.
-            </div>
-          </div>
-        ) : (
-          <div key={day} className="bk-panel">
-            <div className="bk-side-head" aria-live="polite">
-              <div className="bk-side-meta">
-                <h2 className="bk-side-title">{dayLabel(day)}</h2>
-                <button
-                  type="button"
-                  className="bk-reset-day"
-                  onClick={() => {
-                    setDay(null);
-                    setSlot(null);
-                    setSubmitError(null);
-                  }}
+        <section ref={sideRef} className="bk-side" data-step={activeStep}>
+          <ol className="bk-steps" aria-label={b.stepsAriaLabel}>
+            {b.steps.map((s, idx) => {
+              const num = idx + 1;
+              const status = num < activeStep ? "done" : num === activeStep ? "active" : "todo";
+              return (
+                <li
+                  key={s.num}
+                  className="bk-step"
+                  data-status={status}
+                  aria-current={status === "active" ? "step" : undefined}
                 >
-                  GUIDA
-                </button>
+                  <span className="bk-step-code">{status === "done" ? "✓" : s.num}</span>
+                  <span className="bk-step-name">{s.label}</span>
+                </li>
+              );
+            })}
+          </ol>
+
+          {!day ? (
+            <div key="how-it-works" className="bk-panel bk-panel-guide">
+              <div className="bk-side-head">
+                <h2 className="bk-side-title">{b.guideTitle}</h2>
               </div>
+
+              <div className="bk-guide">
+                {b.howItWorks.map((item) => (
+                  <div key={item.code} className="bk-guide-item">
+                    <div className="bk-guide-head">
+                      <span className="bk-guide-num">{item.code}</span>
+                      <strong className="bk-guide-title">{item.title}</strong>
+                    </div>
+                    <p className="bk-guide-body">{item.body}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bk-guide-foot">{b.guideFoot}</div>
             </div>
-
-            {loading ? (
-              <p className="bk-empty-day" role="status">
-                Aggiornamento orari disponibili…
-              </p>
-            ) : slots.length === 0 ? (
-              <p className="bk-empty-day">
-                Nessun orario libero per questa data. Seleziona un altro giorno sul calendario.
-              </p>
-            ) : (
-              <div className="bk-slots" role="group" aria-label="Orari disponibili">
-                {slots.map((s, i) => {
-                  const selected = slot === s;
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      className="bk-slot"
-                      style={{ ["--i" as string]: Math.min(i, 9) }}
-                      aria-pressed={selected}
-                      onClick={() => {
-                        if (slot == null) track("prenota_orario");
-                        setSlot(s);
-                        setSubmitError(null);
-                      }}
-                    >
-                      {selected ? `✓ ${timeLabel(s, tz)}` : timeLabel(s, tz)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {slot != null ? (
-              <form key={slot} className="bk-form" onSubmit={submit} noValidate>
-                <div className="bk-summary">
-                  <span>
-                    SCELTO: <strong>{dayLabel(day)}</strong> · <strong>{timeLabel(slot, tz)}</strong>
-                  </span>
+          ) : (
+            <div key={day} className="bk-panel">
+              <div className="bk-side-head" aria-live="polite">
+                <div className="bk-side-meta">
+                  <h2 className="bk-side-title">{dayLabel(day, intlLocale)}</h2>
                   <button
                     type="button"
-                    className="bk-change-slot"
+                    className="bk-reset-day"
                     onClick={() => {
+                      setDay(null);
                       setSlot(null);
                       setSubmitError(null);
                     }}
                   >
-                    CAMBIA ORARIO
+                    {b.resetToGuide}
                   </button>
                 </div>
+              </div>
 
-                <label className="bk-field">
-                  <span className="bk-label">NOME *</span>
-                  <input
-                    ref={nameInputRef}
-                    name="name"
-                    autoComplete="name"
-                    required
-                    minLength={2}
-                    placeholder="Es. Marco Rossi"
-                    value={name}
-                    aria-invalid={Boolean(nameError)}
-                    aria-describedby={nameError ? "bk-err-name" : undefined}
-                    onChange={(e) => setName(e.target.value)}
-                    onBlur={() => setTouched((t) => ({ ...t, name: true }))}
-                  />
-                  {nameError ? (
-                    <span id="bk-err-name" className="bk-field-error" aria-live="polite">
-                      {nameError}
+              {loading ? (
+                <p className="bk-empty-day" role="status">
+                  {b.loadingSlots}
+                </p>
+              ) : slots.length === 0 ? (
+                <p className="bk-empty-day">{b.emptyDay}</p>
+              ) : (
+                <div className="bk-slots" role="group" aria-label={b.slotsAriaLabel}>
+                  {slots.map((s, i) => {
+                    const selected = slot === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        className="bk-slot"
+                        style={{ ["--i" as string]: Math.min(i, 9) }}
+                        aria-pressed={selected}
+                        onClick={() => {
+                          if (slot == null) track("prenota_orario");
+                          setSlot(s);
+                          setSubmitError(null);
+                        }}
+                      >
+                        {selected
+                          ? `✓ ${timeLabel(s, tz, intlLocale)}`
+                          : timeLabel(s, tz, intlLocale)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {slot != null ? (
+                <form key={slot} className="bk-form" onSubmit={submit} noValidate>
+                  <div className="bk-summary">
+                    <span>
+                      {b.selectedPrefix} <strong>{dayLabel(day, intlLocale)}</strong> {b.selectedGlue}{" "}
+                      <strong>{timeLabel(slot, tz, intlLocale)}</strong>
                     </span>
-                  ) : null}
-                </label>
+                    <button
+                      type="button"
+                      className="bk-change-slot"
+                      onClick={() => {
+                        setSlot(null);
+                        setSubmitError(null);
+                      }}
+                    >
+                      {b.changeSlot}
+                    </button>
+                  </div>
 
-                <label className="bk-field">
-                  <span className="bk-label">EMAIL *</span>
-                  <input
-                    ref={emailInputRef}
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    placeholder="nome@azienda.it"
-                    value={email}
-                    aria-invalid={Boolean(emailError)}
-                    aria-describedby={emailError ? "bk-err-email" : undefined}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-                  />
-                  {emailError ? (
-                    <span id="bk-err-email" className="bk-field-error" aria-live="polite">
-                      {emailError}
+                  <label className="bk-field">
+                    <span className="bk-label">{b.fieldName}</span>
+                    <input
+                      ref={nameInputRef}
+                      name="name"
+                      autoComplete="name"
+                      required
+                      minLength={2}
+                      placeholder={b.namePlaceholder}
+                      value={name}
+                      aria-invalid={Boolean(nameError)}
+                      aria-describedby={nameError ? "bk-err-name" : undefined}
+                      onChange={(e) => setName(e.target.value)}
+                      onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+                    />
+                    {nameError ? (
+                      <span id="bk-err-name" className="bk-field-error" aria-live="polite">
+                        {nameError}
+                      </span>
+                    ) : null}
+                  </label>
+
+                  <label className="bk-field">
+                    <span className="bk-label">{b.fieldEmail}</span>
+                    <input
+                      ref={emailInputRef}
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      placeholder={b.emailPlaceholder}
+                      value={email}
+                      aria-invalid={Boolean(emailError)}
+                      aria-describedby={emailError ? "bk-err-email" : undefined}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
+                    />
+                    {emailError ? (
+                      <span id="bk-err-email" className="bk-field-error" aria-live="polite">
+                        {emailError}
+                      </span>
+                    ) : null}
+                  </label>
+
+                  <label className="bk-field">
+                    <span className="bk-label">{b.fieldTopic}</span>
+                    <textarea
+                      name="topic"
+                      rows={2}
+                      maxLength={600}
+                      placeholder={b.topicPlaceholder}
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                    />
+                  </label>
+
+                  <input className="bk-hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden />
+
+                  {resolvedSubmitError ? (
+                    <p className="bk-error" role="alert">
+                      {resolvedSubmitError}
+                    </p>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    className="bk-submit press"
+                    disabled={submitting}
+                    data-busy={submitting || undefined}
+                  >
+                    <span key={submitting ? "busy" : "idle"} className="bk-submit-label">
+                      {submitting ? (
+                        b.submitBusy
+                      ) : (
+                        <>
+                          {b.submitIdlePrefix} · {timeLabel(slot, tz, intlLocale)}
+                          <ArrowIcon direction="right" variant="display" />
+                        </>
+                      )}
                     </span>
-                  ) : null}
-                </label>
-
-                <label className="bk-field">
-                  <span className="bk-label">DI COSA PARLIAMO (OPZIONALE)</span>
-                  <textarea
-                    name="topic"
-                    rows={2}
-                    maxLength={600}
-                    placeholder="Es. gestionale aziendale, accessi, applicazione web o primo controllo."
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                  />
-                </label>
-
-                <input className="bk-hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden />
-
-                {submitError ? (
-                  <p className="bk-error" role="alert">
-                    {submitError}
-                  </p>
-                ) : null}
-
-                <button
-                  type="submit"
-                  className="bk-submit press"
-                  disabled={submitting}
-                  data-busy={submitting || undefined}
-                >
-                  <span key={submitting ? "busy" : "idle"} className="bk-submit-label">
-                    {submitting ? (
-                      "PRENOTAZIONE IN CORSO…"
-                    ) : (
-                      <>
-                        CONFERMA CONFRONTO · {timeLabel(slot, tz)}
-                        <ArrowIcon direction="right" variant="display" />
-                      </>
-                    )}
-                  </span>
-                </button>
-              </form>
-            ) : null}
-          </div>
-        )}
+                  </button>
+                </form>
+              ) : null}
+            </div>
+          )}
         </section>
       </div>
 
       {/* Fallback diretto con chiamata telefonica sotto le due colonne */}
-      <section className="bk-direct" aria-label="Contatto telefonico diretto">
+      <section className="bk-direct" aria-label={b.directAriaLabel}>
         <div className="bk-direct-copy">
-          <span className="bk-direct-k">CONTATTO DIRETTO</span>
-          <p className="bk-direct-text">
-            Non trovi un orario comodo o preferisci parlarne subito al telefono?
-          </p>
+          <span className="bk-direct-k">{b.directEyebrow}</span>
+          <p className="bk-direct-text">{b.directText}</p>
         </div>
         <a className="bk-direct-btn press" href={PHONE_NUMBER}>
-          CHIAMA ORA · {PHONE_DISPLAY}
+          {b.directButtonPrefix} · {b.phoneDisplay}
           <ArrowIcon direction="right" />
         </a>
       </section>

@@ -136,17 +136,22 @@ export type NewCall = {
   name: string;
   email: string;
   topic: string;
+  summaryPrefix?: string;
+  topicPrefix?: string;
 };
 
 /** Creates the event with the guest invited and a Meet link; Google sends the invites. */
 export async function createCall(call_: NewCall) {
+  const summaryPrefix = call_.summaryPrefix ?? "Chiamata con";
+  const topicPrefix = call_.topicPrefix ?? "Di cosa parliamo:";
+
   const json = await call<{ id: string; hangoutLink?: string; htmlLink?: string }>(
     `/calendars/${encodeURIComponent(env.calendarId)}/events?conferenceDataVersion=1&sendUpdates=all`,
     {
       method: "POST",
       body: JSON.stringify({
-        summary: `Chiamata con ${call_.name}`,
-        description: call_.topic ? `Di cosa parliamo:\n${call_.topic}` : undefined,
+        summary: `${summaryPrefix} ${call_.name}`,
+        description: call_.topic ? `${topicPrefix}\n${call_.topic}` : undefined,
         start: { dateTime: new Date(call_.startMs).toISOString(), timeZone: rules.timeZone },
         end: { dateTime: new Date(call_.endMs).toISOString(), timeZone: rules.timeZone },
         attendees: [{ email: call_.email, displayName: call_.name }],

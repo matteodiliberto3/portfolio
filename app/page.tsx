@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/cyber/site-header";
 import { LaraconCybersecSite } from "@/components/laboratorio/laracon-cybersec-site";
+import { getDictionary } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Cybersecurity — Matteo Di Liberto",
-  description:
-    "Il mondo digitale è cambiato. Verifiche di sicurezza su sistemi, accessi e applicazioni per aiutare imprese, startup e organizzazioni a individuare i rischi prima che diventino un problema.",
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "Cybersecurity — Matteo Di Liberto",
-    description:
-      "Il mondo digitale è cambiato. Verifiche di sicurezza su sistemi, accessi e applicazioni per aiutare imprese, startup e organizzazioni a individuare i rischi prima che diventino un problema.",
-    url: "/",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const page = getDictionary(locale).metadata.pages.home;
+
+  return {
+    title: { absolute: page.title },
+    description: page.description,
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: page.title,
+      description: page.description,
+      url: "/",
+    },
+  };
+}
 
 export default function HomePage() {
   return (

@@ -1,11 +1,11 @@
 "use client";
 
-import React, { type CSSProperties, useEffect, useRef, useState } from "react";
+import React, { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowIcon } from "@/components/cyber/arrow-icon";
 import { AsciiPortraitCanvas } from "@/components/laboratorio/ascii-portrait-canvas";
 import {
-  BUYER_SEGMENTS,
+  buildBuyerSegments,
   type BuyerSegmentKey,
 } from "@/components/cyber/buyer-segments";
 import {
@@ -17,6 +17,7 @@ import {
   ScannerVsManualComparison,
   type DitherSceneKind,
 } from "@/components/cyber/dither-primitives";
+import { useI18n } from "@/components/i18n/locale-provider";
 
 export { PixelDitherCanvas, ScannerVsManualComparison, type DitherSceneKind };
 
@@ -246,15 +247,12 @@ function HeroEvolveTitle({
 }
 
 const DIFF_BANDS: Array<{
-  word: string;
+  word: "RETOOL" | "ADAPT" | "EVOLVE";
   bg: string;
   fg: string;
   badgeBg: string;
   badgeFg: string;
   scene: DitherSceneKind;
-  title: string;
-  body: string[];
-  statement: string;
 }> = [
   {
     word: "RETOOL",
@@ -263,12 +261,6 @@ const DIFF_BANDS: Array<{
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
     scene: "torus",
-    title: "Rimetti in discussione i tuoi strumenti.",
-    body: [
-      "Un sistema datato, un software non supportato o una tecnologia mai aggiornata possono diventare un punto debole.",
-    ],
-    statement:
-      "Aggiornare non significa necessariamente sostituire tutto. Significa capire cosa mantenere, cosa migliorare e cosa non puoi più trascurare.",
   },
   {
     word: "ADAPT",
@@ -277,12 +269,6 @@ const DIFF_BANDS: Array<{
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
     scene: "mutant",
-    title: "Cambia il modo in cui affronti i rischi.",
-    body: [
-      "Non basta installare una nuova tecnologia se continui a utilizzarla con le stesse abitudini.",
-    ],
-    statement:
-      "La sicurezza dipende dalle tecnologie, ma anche dalle decisioni e dai comportamenti di chi le utilizza.",
   },
   {
     word: "EVOLVE",
@@ -291,12 +277,6 @@ const DIFF_BANDS: Array<{
     badgeBg: PALETTE.bg,
     badgeFg: PALETTE.ink,
     scene: "hollowCube",
-    title: "Non aspettare che sia un problema a farti cambiare.",
-    body: [
-      "Le minacce evolvono, le tecnologie cambiano e gli obblighi normativi con esse.",
-    ],
-    statement:
-      "Evolvere significa imparare a riconoscere quando è il momento di verificare, aggiornare e migliorare ciò su cui si basa la tua attività.",
   },
 ];
 
@@ -304,10 +284,12 @@ const DIFF_BANDS: Array<{
  * COMPONENTE PRINCIPALE: SITO CYBERSEC IN STILE LARACON AU 26
  * ========================================================================== */
 export function LaraconCybersecSite() {
+  const { t } = useI18n();
   const [replayNonce, setReplayNonce] = useState(0);
   const [activeBuyer, setActiveBuyer] = useState<BuyerSegmentKey>("pmi");
 
-  const buyer = BUYER_SEGMENTS[activeBuyer];
+  const buyerSegments = useMemo(() => buildBuyerSegments(t.segments), [t.segments]);
+  const buyer = buyerSegments[activeBuyer];
 
   return (
     <div
@@ -324,7 +306,7 @@ export function LaraconCybersecSite() {
       <section
         id="hero"
         className="cyber-hero-section"
-        aria-label="Il cambiamento digitale"
+        aria-label={t.hero.ariaLabel}
         style={{
           borderBottom: `1px solid ${PALETTE.slate}`,
         }}
@@ -340,7 +322,7 @@ export function LaraconCybersecSite() {
           <div className="cyber-hero-portrait">
             <AsciiPortraitCanvas
               src="/portrait.jpg"
-              alt="Ritratto di Matteo Di Liberto in stile ASCII art"
+              alt={t.hero.portraitAlt}
               bgColor={PALETTE.bg}
             />
           </div>
@@ -356,7 +338,7 @@ export function LaraconCybersecSite() {
                 color: "#F4F3FA",
               }}
             >
-              La tua azienda è rimasta al passo?
+              {t.hero.subtitle}
             </p>
 
             <div
@@ -368,11 +350,11 @@ export function LaraconCybersecSite() {
               }}
             >
               <Link href="/prenota" className="cyber-ghost-red">
-                Parliamo della tua azienda
+                {t.hero.ctaPrimary}
                 <ArrowIcon direction="right" variant="display" />
               </Link>
               <a href="#go-deeper" className="cyber-ghost-white">
-                Scopri cosa è cambiato ↓
+                {t.hero.ctaSecondary}
               </a>
             </div>
           </div>
@@ -384,7 +366,7 @@ export function LaraconCybersecSite() {
        * =================================================================== */}
       <section
         id="go-deeper"
-        aria-label="La consapevolezza: funzionare non significa essere al sicuro"
+        aria-label={t.goDeeper.ariaLabel}
         style={{
           minHeight: "88vh",
           borderBottom: `1px solid ${PALETTE.slate}`,
@@ -450,9 +432,9 @@ export function LaraconCybersecSite() {
                 color: PALETTE.ink,
               }}
             >
-              Funzionare
+              {t.goDeeper.titleLine1}
               <br />
-              <span style={{ color: "#F4F3FA" }}>non significa essere al sicuro</span>
+              <span style={{ color: "#F4F3FA" }}>{t.goDeeper.titleLine2}</span>
             </h2>
 
             <div
@@ -470,7 +452,7 @@ export function LaraconCybersecSite() {
               }}
             >
               <p style={{ margin: 0, fontSize: "14.5px", lineHeight: 1.65, color: PALETTE.ink }}>
-                La tua azienda può operare ogni giorno senza mostrare segnali di problemi, ma avere vulnerabilità che nessuno sta controllando.
+                {t.goDeeper.p1}
               </p>
               <p
                 style={{
@@ -483,7 +465,7 @@ export function LaraconCybersecSite() {
                   paddingLeft: "14px",
                 }}
               >
-                Con l&apos;evoluzione delle minacce e delle responsabilità normative, conoscere i propri rischi digitali è il primo passo per proteggersi.
+                {t.goDeeper.p2}
               </p>
             </div>
           </div>
@@ -495,7 +477,7 @@ export function LaraconCybersecSite() {
        * =================================================================== */}
       <section
         id="risposte"
-        aria-label="Le tre risposte al cambiamento: Retool, Adapt, Evolve"
+        aria-label={t.risposte.ariaLabel}
         style={{ borderBottom: `1px solid ${PALETTE.slate}` }}
       >
         {/* Intestazione Sezione 04 */}
@@ -518,108 +500,111 @@ export function LaraconCybersecSite() {
                 color: PALETTE.ink,
               }}
             >
-              IL MONDO CAMBIA.
+              {t.risposte.headingLine1}
               <br />
-              RESTARE FERMI È UNA SCELTA.
+              {t.risposte.headingLine2}
             </h2>
           </div>
         </div>
 
         {/* 3 Bande Widescreen con figure 3D in Bayer dither (torus / mutant / hollowCube) */}
-        {DIFF_BANDS.map((band) => (
-          <div
-            key={band.word}
-            style={{
-              background: band.bg,
-              color: band.fg,
-              borderBottom: `2px solid ${PALETTE.bg}`,
-              padding: "clamp(40px, 6vw, 76px) clamp(20px, 4vw, 48px)",
-            }}
-          >
+        {DIFF_BANDS.map((band) => {
+          const bandCopy = t.risposte.bands[band.word];
+          return (
             <div
+              key={band.word}
               style={{
-                maxWidth: "1280px",
-                margin: "0 auto",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                alignItems: "center",
-                gap: "36px",
+                background: band.bg,
+                color: band.fg,
+                borderBottom: `2px solid ${PALETTE.bg}`,
+                padding: "clamp(40px, 6vw, 76px) clamp(20px, 4vw, 48px)",
               }}
             >
-              {/* Parte SX: Figura 3D dithered + Badge parola */}
               <div
                 style={{
-                  position: "relative",
-                  display: "flex",
+                  maxWidth: "1280px",
+                  margin: "0 auto",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
                   alignItems: "center",
-                  justifyContent: "center",
-                  minHeight: "260px",
+                  gap: "36px",
                 }}
               >
-                <PixelDitherCanvas
-                  kind={band.scene}
-                  color={PALETTE.bg}
-                  width={420}
-                  height={280}
-                  cellSize={5}
-                  style={{ width: "100%", maxWidth: "420px", height: "auto" }}
-                />
-                <div style={{ position: "absolute", left: "8%", top: "50%", transform: "translateY(-50%)" }}>
-                  <PixelDissolveBadge
-                    text={band.word}
-                    bg={band.badgeBg}
-                    fg={band.badgeFg}
-                    fontSize="clamp(2.4rem, 5vw, 4.2rem)"
-                    padding="0.1em 0.28em"
-                  />
-                </div>
-              </div>
-
-              {/* Parte DX: Risposta strategica */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <h3
-                  style={{
-                    margin: 0,
-                    fontFamily: DISPLAY_FONT,
-                    fontSize: "clamp(1.9rem, 3.3vw, 2.7rem)",
-                    lineHeight: 0.98,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {band.title}
-                </h3>
+                {/* Parte SX: Figura 3D dithered + Badge parola */}
                 <div
                   style={{
+                    position: "relative",
                     display: "flex",
-                    flexDirection: "column",
+                    alignItems: "center",
                     justifyContent: "center",
-                    gap: "10px",
-                    minHeight: "104px",
+                    minHeight: "260px",
                   }}
                 >
-                  {band.body.map((paragraph) => (
-                    <p key={paragraph} style={{ margin: 0, fontSize: "14px", lineHeight: 1.65 }}>
-                      {paragraph}
-                    </p>
-                  ))}
+                  <PixelDitherCanvas
+                    kind={band.scene}
+                    color={PALETTE.bg}
+                    width={420}
+                    height={280}
+                    cellSize={5}
+                    style={{ width: "100%", maxWidth: "420px", height: "auto" }}
+                  />
+                  <div style={{ position: "absolute", left: "8%", top: "50%", transform: "translateY(-50%)" }}>
+                    <PixelDissolveBadge
+                      text={band.word}
+                      bg={band.badgeBg}
+                      fg={band.badgeFg}
+                      fontSize="clamp(2.4rem, 5vw, 4.2rem)"
+                      padding="0.1em 0.28em"
+                    />
+                  </div>
                 </div>
-                <div
-                  style={{
-                    marginTop: "6px",
-                    padding: "14px 16px",
-                    background: PALETTE.bg,
-                    color: PALETTE.ink,
-                    fontSize: "13.5px",
-                    lineHeight: 1.6,
-                    fontWeight: 700,
-                  }}
-                >
-                  {band.statement}
+
+                {/* Parte DX: Risposta strategica */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontFamily: DISPLAY_FONT,
+                      fontSize: "clamp(1.9rem, 3.3vw, 2.7rem)",
+                      lineHeight: 0.98,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {bandCopy.title}
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      gap: "10px",
+                      minHeight: "104px",
+                    }}
+                  >
+                    {bandCopy.body.map((paragraph, idx) => (
+                      <p key={idx} style={{ margin: 0, fontSize: "14px", lineHeight: 1.65 }}>
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "6px",
+                      padding: "14px 16px",
+                      background: PALETTE.bg,
+                      color: PALETTE.ink,
+                      fontSize: "13.5px",
+                      lineHeight: 1.6,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {bandCopy.statement}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       {/* =====================================================================
@@ -627,7 +612,7 @@ export function LaraconCybersecSite() {
        * =================================================================== */}
       <section
         id="a-chi-mi-rivolgo"
-        aria-label="A chi mi rivolgo: Imprenditori e PMI, Startup e software house, Multinazionali"
+        aria-label={t.targetsHome.ariaLabel}
         style={{
           position: "relative",
           minHeight: "88vh",
@@ -684,16 +669,16 @@ export function LaraconCybersecSite() {
                 color: PALETTE.ink,
               }}
             >
-              OGNI AZIENDA HA QUALCOSA
+              {t.targetsHome.titleLine1}
               <br />
-              CHE NON PUÒ PERMETTERSI{" "}
+              {t.targetsHome.titleLine2Prefix}
               <span
                 style={{
                   color: buyer.badgeColor === PALETTE.ink ? "#F4F3FA" : buyer.badgeColor,
                   transition: "color 220ms cubic-bezier(0.23, 1, 0.32, 1)",
                 }}
               >
-                DI PERDERE.
+                {t.targetsHome.titleEmphasis}
               </span>
             </h2>
           </div>
@@ -701,7 +686,7 @@ export function LaraconCybersecSite() {
           {/* 3 Card selezionabili per tipologia di realtà aziendale */}
           <div
             role="tablist"
-            aria-label="Seleziona il tipo di realtà aziendale"
+            aria-label={t.targetsHome.tablistAriaLabel}
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
@@ -709,8 +694,8 @@ export function LaraconCybersecSite() {
               gap: "10px",
             }}
           >
-            {(Object.keys(BUYER_SEGMENTS) as BuyerSegmentKey[]).map((key) => {
-              const seg = BUYER_SEGMENTS[key];
+            {(Object.keys(buyerSegments) as BuyerSegmentKey[]).map((key) => {
+              const seg = buyerSegments[key];
               const isSelected = activeBuyer === key;
               const selectedInk = seg.badgeColor === PALETTE.ink ? PALETTE.bg : "#ffffff";
               return (
@@ -767,8 +752,8 @@ export function LaraconCybersecSite() {
               transition: "border-color 180ms ease",
             }}
           >
-            {(Object.keys(BUYER_SEGMENTS) as BuyerSegmentKey[]).map((key) => {
-              const seg = BUYER_SEGMENTS[key];
+            {(Object.keys(buyerSegments) as BuyerSegmentKey[]).map((key) => {
+              const seg = buyerSegments[key];
               const isActive = key === activeBuyer;
               const headlineStyle: CSSProperties = {
                 margin: 0,
@@ -842,7 +827,7 @@ export function LaraconCybersecSite() {
                         </Link>
 
                         <Link href={`/per-chi#${key}`} className="cyber-home-deep-link">
-                          Approfondisci: {seg.shortLabel}
+                          {t.targetsHome.deepLinkPrefix} {seg.shortLabel}
                           <ArrowIcon direction="right" />
                         </Link>
                       </>
@@ -854,7 +839,7 @@ export function LaraconCybersecSite() {
                         </span>
 
                         <span className="cyber-home-deep-link">
-                          Approfondisci: {seg.shortLabel}
+                          {t.targetsHome.deepLinkPrefix} {seg.shortLabel}
                           <ArrowIcon direction="right" />
                         </span>
                       </>
@@ -872,7 +857,7 @@ export function LaraconCybersecSite() {
        * =================================================================== */}
       <section
         id="conclusione"
-        aria-label="Dalla consapevolezza all'azione"
+        aria-label={t.conclusion.ariaLabel}
         style={{
           background: PALETTE.ink,
           color: PALETTE.bg,
@@ -916,8 +901,8 @@ export function LaraconCybersecSite() {
               gap: "0.06em",
             }}
           >
-            <span>IL PROSSIMO ATTACCO</span>
-            <span>NON TI AVVISERÀ.</span>
+            <span>{t.conclusion.line1}</span>
+            <span>{t.conclusion.line2}</span>
           </h2>
 
           <div
@@ -930,10 +915,10 @@ export function LaraconCybersecSite() {
             }}
           >
             <p style={{ margin: 0, fontSize: "14.5px", lineHeight: 1.65, color: "#1B1A1D" }}>
-              Ma questo non significa che tu debba aspettarlo per iniziare a porti le domande giuste.
+              {t.conclusion.p1}
             </p>
             <p style={{ margin: "2px 0", fontSize: "16px", lineHeight: 1.55, fontWeight: 700, color: PALETTE.bg }}>
-              Non devi conoscere tutte le risposte oggi. Devi sapere da dove iniziare a cercarle.
+              {t.conclusion.p2}
             </p>
           </div>
 
@@ -957,7 +942,7 @@ export function LaraconCybersecSite() {
                 borderRadius: 0,
               }}
             >
-              Prenota un primo confronto
+              {t.conclusion.ctaPrimary}
               <ArrowIcon direction="right" variant="display" />
             </Link>
             <a
@@ -977,7 +962,7 @@ export function LaraconCybersecSite() {
                 alignItems: "center",
               }}
             >
-              Contatto diretto
+              {t.conclusion.ctaDirect}
             </a>
           </div>
         </div>
